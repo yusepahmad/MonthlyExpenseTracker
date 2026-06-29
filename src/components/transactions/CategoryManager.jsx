@@ -80,7 +80,7 @@ export default function CategoryManager() {
   }
 
   return (
-    <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+    <div className="space-y-4 pb-1">
       {renderGroup("Pengeluaran", expenseCategories)}
       {renderGroup("Pemasukan", incomeCategories)}
 
