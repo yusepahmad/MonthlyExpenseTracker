@@ -1,0 +1,68 @@
+import { useState } from "react";
+import { AppProvider } from "./context/AppContext";
+import { useTheme } from "./hooks/useTheme";
+import { useHideAmount } from "./hooks/useHideAmount";
+import { useRecurringCheck } from "./hooks/useRecurringCheck";
+import Sidebar from "./components/layout/Sidebar";
+import BottomNav from "./components/layout/BottomNav";
+import TopBar from "./components/layout/TopBar";
+import DashboardPage from "./pages/DashboardPage";
+import TransactionsPage from "./pages/TransactionsPage";
+import RecurringPage from "./pages/RecurringPage";
+import ReportsPage from "./pages/ReportsPage";
+import SavingsGoalsPage from "./pages/SavingsGoalsPage";
+import RecurringDueDialog from "./components/recurring/RecurringDueDialog";
+
+const KNOWN_PAGES = ["dashboard", "transactions", "recurring", "reports", "savings"];
+
+function AppContent() {
+  const [activePage, setActivePage] = useState("dashboard");
+  const [collapsed, setCollapsed] = useState(false);
+  const { theme, toggleTheme } = useTheme();
+  const { hideAmount, toggleHideAmount } = useHideAmount();
+  const { dueItems, markChecked } = useRecurringCheck();
+
+  return (
+    <div className="flex h-screen bg-transparent dark:bg-gray-950">
+      <Sidebar
+        activePage={activePage}
+        onNavigate={setActivePage}
+        collapsed={collapsed}
+        onToggleCollapse={() => setCollapsed((v) => !v)}
+      />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <TopBar
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          hideAmount={hideAmount}
+          onToggleHideAmount={toggleHideAmount}
+        />
+        <main key={activePage} className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 md:pb-6 animate-fade-in">
+          {activePage === "dashboard" && <DashboardPage hideAmount={hideAmount} />}
+          {activePage === "transactions" && <TransactionsPage hideAmount={hideAmount} />}
+          {activePage === "recurring" && <RecurringPage />}
+          {activePage === "reports" && <ReportsPage />}
+          {activePage === "savings" && <SavingsGoalsPage />}
+          {!KNOWN_PAGES.includes(activePage) && (
+            <div className="bg-white/50 dark:bg-gray-900/50 backdrop-blur-2xl backdrop-saturate-150 border border-white/60 dark:border-gray-800/60 rounded-2xl shadow-soft p-8 text-center">
+              <p className="text-sm text-gray-400">
+                Halaman ini akan tersedia di phase berikutnya.
+              </p>
+            </div>
+          )}
+        </main>
+      </div>
+      <BottomNav activePage={activePage} onNavigate={setActivePage} />
+
+      <RecurringDueDialog dueItems={dueItems} onClose={markChecked} />
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AppProvider>
+      <AppContent />
+    </AppProvider>
+  );
+}
