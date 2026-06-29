@@ -1,11 +1,11 @@
 import { createContext, useContext, useEffect, useReducer, useRef, useState } from "react";
 import { getCurrentMonth } from "../lib/utils";
-import { makeCustomCategoryColor, CUSTOM_CATEGORY_ICON } from "../lib/categories";
+import { makeCustomCategoryColor, CUSTOM_CATEGORY_ICON, isCategoryNameTaken, DEFAULT_CATEGORIES } from "../lib/categories";
 import { loadAllData, migrateLocalDataIfNeeded } from "../lib/api";
 import { insertTransaction, updateTransaction as updateTransactionRow, deleteTransaction as deleteTransactionRow } from "../lib/api/transactionsApi";
 import { replaceBudgets } from "../lib/api/budgetsApi";
 import { insertRecurring, updateRecurring as updateRecurringRow, deleteRecurring as deleteRecurringRow } from "../lib/api/recurringApi";
-import { insertCustomCategory } from "../lib/api/categoriesApi";
+import { insertCustomCategory, upsertCategoryOverride, deleteCustomCategory } from "../lib/api/categoriesApi";
 import { insertSavingsGoal, updateSavingsGoal as updateSavingsGoalRow, deleteSavingsGoal as deleteSavingsGoalRow } from "../lib/api/savingsGoalsApi";
 import { saveActiveMonth } from "../lib/api/settingsApi";
 import { replaceAllFromExcelImport } from "../lib/api/bulkApi";
@@ -83,7 +83,7 @@ function reducer(state, action) {
       return { ...state, savingsGoals: state.savingsGoals.filter((g) => g.id !== action.payload) };
     case "ADD_CATEGORY": {
       const { name, type, subcategories, icon } = action.payload;
-      if (state.customCategories.some((c) => c.name === name)) return state;
+      if (isCategoryNameTaken(name, state.customCategories)) return state;
       const category = {
         name,
         type,
@@ -92,6 +92,36 @@ function reducer(state, action) {
         icon: icon || CUSTOM_CATEGORY_ICON,
       };
       return { ...state, customCategories: [...state.customCategories, category] };
+    }
+    case "UPDATE_CATEGORY": {
+      const { originalName, name, type, color, icon, subcategories } = action.payload;
+      const updated = { name, type, color, icon, subcategories: subcategories || [] };
+
+      // Renaming to a name that's already taken by something else isn't allowed.
+      if (isCategoryNameTaken(name, state.customCategories, originalName)) return state;
+
+      const existingIndex = state.customCategories.findIndex(
+        (c) => c.name.toLowerCase() === originalName.toLowerCase()
+      );
+
+      if (existingIndex >= 0) {
+        const next = [...state.customCategories];
+        next[existingIndex] = updated;
+        return { ...state, customCategories: next };
+      }
+
+      // Editing a built-in default category for the first time — store it
+      // as an override entry rather than mutating DEFAULT_CATEGORIES.
+      return { ...state, customCategories: [...state.customCategories, updated] };
+    }
+    case "DELETE_CATEGORY": {
+      const name = action.payload;
+      const isDefault = DEFAULT_CATEGORIES.some((d) => d.name.toLowerCase() === name.toLowerCase());
+      if (isDefault) return state; // default categories can be edited, not removed
+      return {
+        ...state,
+        customCategories: state.customCategories.filter((c) => c.name.toLowerCase() !== name.toLowerCase()),
+      };
     }
     default:
       return state;
@@ -131,6 +161,10 @@ function syncToCloud(userId, action) {
         return deleteSavingsGoalRow(userId, action.payload);
       case "ADD_CATEGORY":
         return insertCustomCategory(userId, action.payload);
+      case "UPDATE_CATEGORY":
+        return upsertCategoryOverride(userId, action.payload.originalName, action.payload);
+      case "DELETE_CATEGORY":
+        return deleteCustomCategory(userId, action.payload);
       case "SET_ACTIVE_MONTH":
         return saveActiveMonth(userId, action.payload);
       default:

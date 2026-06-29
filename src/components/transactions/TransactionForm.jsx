@@ -5,8 +5,10 @@ import { generateId, formatNumberInput, parseNumberInput } from "../../lib/utils
 import { suggestCategory } from "../../lib/categoryKeywords";
 import { findSimilarRecentTransaction } from "../../lib/smartSuggestion";
 import CategoryForm from "./CategoryForm";
+import CategoryManager from "./CategoryManager";
 import Dropdown from "../ui/Dropdown";
 import DatePicker from "../ui/DatePicker";
+import Modal from "../ui/Modal";
 import Icon from "../ui/Icon";
 import SuggestionChip from "./SuggestionChip";
 
@@ -51,6 +53,7 @@ export default function TransactionForm({ onSaved, onDiscard, editingTransaction
 
   const [error, setError] = useState("");
   const [showCategoryForm, setShowCategoryForm] = useState(false);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [dismissedSuggestion, setDismissedSuggestion] = useState(false);
 
   const categoriesForType = getCategoriesByType(form.type, state.customCategories);
@@ -196,13 +199,22 @@ export default function TransactionForm({ onSaved, onDiscard, editingTransaction
           <label className="block text-sm font-medium text-gray-600 dark:text-gray-300">
             Kategori
           </label>
-          <button
-            type="button"
-            onClick={() => setShowCategoryForm((v) => !v)}
-            className="text-xs text-purple-600 font-medium hover:underline"
-          >
-            {showCategoryForm ? "Tutup" : "+ Kategori baru"}
-          </button>
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setShowCategoryForm((v) => !v)}
+              className="text-xs text-purple-600 font-medium hover:underline"
+            >
+              {showCategoryForm ? "Tutup" : "+ Kategori baru"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCategoryManager(true)}
+              className="text-xs text-gray-400 font-light hover:text-purple-600 hover:underline"
+            >
+              Kelola
+            </button>
+          </div>
         </div>
 
         {showCategoryForm ? (
@@ -301,6 +313,14 @@ export default function TransactionForm({ onSaved, onDiscard, editingTransaction
           Buang draft
         </button>
       )}
+
+      <Modal
+        open={showCategoryManager}
+        onClose={() => setShowCategoryManager(false)}
+        title="Kelola Kategori"
+      >
+        <CategoryManager />
+      </Modal>
     </form>
   );
 }

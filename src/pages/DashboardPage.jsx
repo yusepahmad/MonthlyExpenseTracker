@@ -7,6 +7,7 @@ import BudgetProgress from "../components/dashboard/BudgetProgress";
 import RecentTransactions from "../components/dashboard/RecentTransactions";
 import InsightCards from "../components/dashboard/InsightCards";
 import InsightMessages from "../components/dashboard/InsightMessages";
+import CashFlowPredictionCard from "../components/dashboard/CashFlowPredictionCard";
 import Dropdown from "../components/ui/Dropdown";
 import Icon from "../components/ui/Icon";
 
@@ -30,6 +31,8 @@ export default function DashboardPage({ hideAmount }) {
       <InsightCards hideAmount={hideAmount} />
 
       <InsightMessages />
+
+      <CashFlowPredictionCard hideAmount={hideAmount} />
 
       <div className="flex justify-end">
         <Dropdown

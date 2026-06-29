@@ -16,12 +16,38 @@ export const DEFAULT_CATEGORIES = [
 
 const FALLBACK_COLORS = ["#0D9488", "#D946EF", "#F43F5E", "#65A30D", "#0284C7", "#CA8A04"];
 
+function normalizeName(name) {
+  return (name || "").trim().toLowerCase();
+}
+
+// customCategories can both ADD brand-new categories and OVERRIDE a default
+// category's color/icon/subcategories (matched by name, case-insensitive).
+// This lets users edit "Makan"'s subcategories without duplicating it.
 export function getAllCategories(customCategories = []) {
-  return [...DEFAULT_CATEGORIES, ...customCategories];
+  const overridesByName = new Map();
+  const newCategories = [];
+
+  for (const c of customCategories) {
+    const key = normalizeName(c.name);
+    const isOverrideOfDefault = DEFAULT_CATEGORIES.some((d) => normalizeName(d.name) === key);
+    if (isOverrideOfDefault) {
+      overridesByName.set(key, c);
+    } else {
+      newCategories.push(c);
+    }
+  }
+
+  const merged = DEFAULT_CATEGORIES.map((d) => {
+    const override = overridesByName.get(normalizeName(d.name));
+    return override ? { ...d, ...override, isDefault: true } : { ...d, isDefault: true };
+  });
+
+  return [...merged, ...newCategories.map((c) => ({ ...c, isDefault: false }))];
 }
 
 export function getCategory(name, customCategories = []) {
-  return getAllCategories(customCategories).find((c) => c.name === name);
+  const key = normalizeName(name);
+  return getAllCategories(customCategories).find((c) => normalizeName(c.name) === key);
 }
 
 export function getCategoriesByType(type, customCategories = []) {
@@ -30,6 +56,12 @@ export function getCategoriesByType(type, customCategories = []) {
 
 export function getSubcategories(categoryName, customCategories = []) {
   return getCategory(categoryName, customCategories)?.subcategories || [];
+}
+
+export function isCategoryNameTaken(name, customCategories = [], excludeName = null) {
+  const key = normalizeName(name);
+  if (excludeName && normalizeName(excludeName) === key) return false;
+  return getAllCategories(customCategories).some((c) => normalizeName(c.name) === key);
 }
 
 export function makeCustomCategoryColor(index) {

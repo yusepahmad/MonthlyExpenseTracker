@@ -1,37 +1,73 @@
 import { useState } from "react";
 import { useApp } from "../../context/AppContext";
+import { makeCustomCategoryColor } from "../../lib/categories";
 import Icon, { PICKABLE_ICONS } from "../ui/Icon";
 
-export default function CategoryForm({ type, onSaved, onCancel }) {
-  const { dispatch } = useApp();
-  const [name, setName] = useState("");
-  const [subcategoriesText, setSubcategoriesText] = useState("");
-  const [icon, setIcon] = useState(PICKABLE_ICONS[0]);
+export default function CategoryForm({ type, editingCategory, onSaved, onCancel }) {
+  const { state, dispatch } = useApp();
+  const isEdit = Boolean(editingCategory);
+
+  const [name, setName] = useState(editingCategory?.name || "");
+  const [subcategoriesText, setSubcategoriesText] = useState(
+    (editingCategory?.subcategories || []).join(", ")
+  );
+  const [icon, setIcon] = useState(editingCategory?.icon || PICKABLE_ICONS[0]);
+  const [error, setError] = useState("");
 
   function handleSubmit() {
-    if (!name.trim()) return;
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setError("Nama kategori harus diisi");
+      return;
+    }
+
+    const subcategories = subcategoriesText
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    if (isEdit) {
+      dispatch({
+        type: "UPDATE_CATEGORY",
+        payload: {
+          originalName: editingCategory.name,
+          name: trimmed,
+          type: editingCategory.type,
+          color: editingCategory.color,
+          icon,
+          subcategories,
+        },
+      });
+      setError("");
+      onSaved?.(trimmed);
+      return;
+    }
 
     dispatch({
       type: "ADD_CATEGORY",
       payload: {
-        name: name.trim(),
+        name: trimmed,
         type,
         icon,
-        subcategories: subcategoriesText
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
+        subcategories,
+        color: makeCustomCategoryColor(state.customCategories.length),
       },
     });
-
-    onSaved?.(name.trim());
+    setError("");
+    onSaved?.(trimmed);
   }
 
   return (
     <div className="space-y-3 rounded-xl p-3.5 bg-white/30 dark:bg-gray-800/40 backdrop-blur-sm border border-white/50 dark:border-gray-700/50 animate-fade-in">
+      {error && (
+        <p className="text-sm font-light text-red-600 bg-red-50/70 backdrop-blur-sm border border-red-100 dark:bg-red-900/30 px-3 py-2 rounded-xl">
+          {error}
+        </p>
+      )}
+
       <div>
         <label className="block text-sm font-light text-gray-600 dark:text-gray-300 mb-1.5">
-          Nama Kategori Baru
+          {isEdit ? "Nama Kategori" : "Nama Kategori Baru"}
         </label>
         <input
           type="text"
@@ -83,7 +119,7 @@ export default function CategoryForm({ type, onSaved, onCancel }) {
           onClick={handleSubmit}
           className="flex-1 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-medium hover:opacity-90 hover:scale-[1.02] transition-transform"
         >
-          Tambah
+          {isEdit ? "Simpan Perubahan" : "Tambah"}
         </button>
         <button
           type="button"
