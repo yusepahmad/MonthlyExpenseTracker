@@ -3,6 +3,7 @@ import { AppProvider } from "./context/AppContext";
 import { useTheme } from "./hooks/useTheme";
 import { useHideAmount } from "./hooks/useHideAmount";
 import { useRecurringCheck } from "./hooks/useRecurringCheck";
+import { useAuth } from "./hooks/useAuth";
 import Sidebar from "./components/layout/Sidebar";
 import BottomNav from "./components/layout/BottomNav";
 import TopBar from "./components/layout/TopBar";
@@ -11,11 +12,12 @@ import TransactionsPage from "./pages/TransactionsPage";
 import RecurringPage from "./pages/RecurringPage";
 import ReportsPage from "./pages/ReportsPage";
 import SavingsGoalsPage from "./pages/SavingsGoalsPage";
+import LoginPage from "./pages/LoginPage";
 import RecurringDueDialog from "./components/recurring/RecurringDueDialog";
 
 const KNOWN_PAGES = ["dashboard", "transactions", "recurring", "reports", "savings"];
 
-function AppContent() {
+function AppContent({ user, onSignOut }) {
   const [activePage, setActivePage] = useState("dashboard");
   const [collapsed, setCollapsed] = useState(false);
   const { theme, toggleTheme } = useTheme();
@@ -36,6 +38,8 @@ function AppContent() {
           onToggleTheme={toggleTheme}
           hideAmount={hideAmount}
           onToggleHideAmount={toggleHideAmount}
+          user={user}
+          onSignOut={onSignOut}
         />
         <main key={activePage} className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 md:pb-6 animate-fade-in">
           {activePage === "dashboard" && <DashboardPage hideAmount={hideAmount} />}
@@ -60,9 +64,23 @@ function AppContent() {
 }
 
 export default function App() {
+  const { user, isLoading, signOut } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-sm font-light text-gray-400">Memuat...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
+
   return (
-    <AppProvider>
-      <AppContent />
+    <AppProvider userId={user.id}>
+      <AppContent user={user} onSignOut={signOut} />
     </AppProvider>
   );
 }

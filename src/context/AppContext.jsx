@@ -1,7 +1,14 @@
-import { createContext, useContext, useEffect, useReducer } from "react";
+import { createContext, useContext, useEffect, useReducer, useRef, useState } from "react";
 import { getCurrentMonth } from "../lib/utils";
-import { loadState, saveState } from "../lib/storage";
 import { makeCustomCategoryColor, CUSTOM_CATEGORY_ICON } from "../lib/categories";
+import { loadAllData, migrateLocalDataIfNeeded } from "../lib/api";
+import { insertTransaction, updateTransaction as updateTransactionRow, deleteTransaction as deleteTransactionRow } from "../lib/api/transactionsApi";
+import { replaceBudgets } from "../lib/api/budgetsApi";
+import { insertRecurring, updateRecurring as updateRecurringRow, deleteRecurring as deleteRecurringRow } from "../lib/api/recurringApi";
+import { insertCustomCategory } from "../lib/api/categoriesApi";
+import { insertSavingsGoal, updateSavingsGoal as updateSavingsGoalRow, deleteSavingsGoal as deleteSavingsGoalRow } from "../lib/api/savingsGoalsApi";
+import { saveActiveMonth } from "../lib/api/settingsApi";
+import { replaceAllFromExcelImport } from "../lib/api/bulkApi";
 
 const baseState = {
   transactions: [],
@@ -25,13 +32,18 @@ function reducer(state, action) {
         savingsGoals: action.payload.savingsGoals || state.savingsGoals,
         fileName: action.payload.fileName,
       };
-    case "LOAD_FROM_STORAGE":
-      return { ...state, ...action.payload };
-    case "ADD_TRANSACTION":
+    case "LOAD_FROM_CLOUD":
       return {
         ...state,
-        transactions: [...state.transactions, action.payload],
+        transactions: action.payload.transactions,
+        budgets: action.payload.budgets,
+        recurring: action.payload.recurring,
+        customCategories: action.payload.customCategories,
+        savingsGoals: action.payload.savingsGoals,
+        activeMonth: action.payload.activeMonth || state.activeMonth,
       };
+    case "ADD_TRANSACTION":
+      return { ...state, transactions: [...state.transactions, action.payload] };
     case "UPDATE_TRANSACTION":
       return {
         ...state,
@@ -40,10 +52,7 @@ function reducer(state, action) {
         ),
       };
     case "DELETE_TRANSACTION":
-      return {
-        ...state,
-        transactions: state.transactions.filter((t) => t.id !== action.payload),
-      };
+      return { ...state, transactions: state.transactions.filter((t) => t.id !== action.payload) };
     case "SET_BUDGETS":
       return { ...state, budgets: action.payload };
     case "SET_RECURRING":
@@ -58,10 +67,7 @@ function reducer(state, action) {
         ),
       };
     case "DELETE_RECURRING":
-      return {
-        ...state,
-        recurring: state.recurring.filter((r) => r.id !== action.payload),
-      };
+      return { ...state, recurring: state.recurring.filter((r) => r.id !== action.payload) };
     case "SET_ACTIVE_MONTH":
       return { ...state, activeMonth: action.payload };
     case "ADD_SAVINGS_GOAL":
@@ -74,10 +80,7 @@ function reducer(state, action) {
         ),
       };
     case "DELETE_SAVINGS_GOAL":
-      return {
-        ...state,
-        savingsGoals: state.savingsGoals.filter((g) => g.id !== action.payload),
-      };
+      return { ...state, savingsGoals: state.savingsGoals.filter((g) => g.id !== action.payload) };
     case "ADD_CATEGORY": {
       const { name, type, subcategories, icon } = action.payload;
       if (state.customCategories.some((c) => c.name === name)) return state;
@@ -95,22 +98,87 @@ function reducer(state, action) {
   }
 }
 
-function init() {
-  const persisted = loadState();
-  return persisted ? { ...baseState, ...persisted } : baseState;
+// Fire-and-forget cloud sync for each action — keeps the reducer instantly
+// responsive (no loading spinners on every click) while persisting to
+// Supabase in the background. Errors are logged, not surfaced as UI
+// blockers, since the optimistic local state already reflects the change.
+function syncToCloud(userId, action) {
+  if (!userId) return;
+
+  const run = async () => {
+    switch (action.type) {
+      case "LOAD_FROM_EXCEL":
+        return replaceAllFromExcelImport(userId, action.payload);
+      case "ADD_TRANSACTION":
+        return insertTransaction(userId, action.payload);
+      case "UPDATE_TRANSACTION":
+        return updateTransactionRow(userId, action.payload);
+      case "DELETE_TRANSACTION":
+        return deleteTransactionRow(userId, action.payload);
+      case "SET_BUDGETS":
+        return replaceBudgets(userId, action.payload);
+      case "ADD_RECURRING":
+        return insertRecurring(userId, action.payload);
+      case "UPDATE_RECURRING":
+        return updateRecurringRow(userId, action.payload);
+      case "DELETE_RECURRING":
+        return deleteRecurringRow(userId, action.payload);
+      case "ADD_SAVINGS_GOAL":
+        return insertSavingsGoal(userId, action.payload);
+      case "UPDATE_SAVINGS_GOAL":
+        return updateSavingsGoalRow(userId, action.payload);
+      case "DELETE_SAVINGS_GOAL":
+        return deleteSavingsGoalRow(userId, action.payload);
+      case "ADD_CATEGORY":
+        return insertCustomCategory(userId, action.payload);
+      case "SET_ACTIVE_MONTH":
+        return saveActiveMonth(userId, action.payload);
+      default:
+        return null;
+    }
+  };
+
+  run().catch((err) => console.error("Cloud sync failed for", action.type, err));
 }
 
 const AppContext = createContext(null);
 
-export function AppProvider({ children }) {
-  const [state, dispatch] = useReducer(reducer, undefined, init);
+export function AppProvider({ children, userId }) {
+  const [state, dispatch] = useReducer(reducer, baseState);
+  const [isLoading, setIsLoading] = useState(true);
+  const userIdRef = useRef(userId);
+  userIdRef.current = userId;
 
   useEffect(() => {
-    saveState(state);
-  }, [state]);
+    if (!userId) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        await migrateLocalDataIfNeeded(userId);
+        const cloudData = await loadAllData(userId);
+        if (!cancelled) {
+          dispatch({ type: "LOAD_FROM_CLOUD", payload: cloudData });
+        }
+      } catch (err) {
+        console.error("Failed to load cloud data", err);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  function dispatchWithSync(action) {
+    dispatch(action);
+    syncToCloud(userIdRef.current, action);
+  }
 
   return (
-    <AppContext.Provider value={{ state, dispatch }}>
+    <AppContext.Provider value={{ state, dispatch: dispatchWithSync, isLoading }}>
       {children}
     </AppContext.Provider>
   );

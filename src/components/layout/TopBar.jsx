@@ -1,11 +1,11 @@
 import { useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, MoreVertical, FileDown, Upload, Download, Eye, EyeOff } from "lucide-react";
+import { ChevronLeft, ChevronRight, MoreVertical, FileDown, Upload, Download, Eye, EyeOff, LogOut } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useExcel } from "../../hooks/useExcel";
 import { shiftMonth } from "../../lib/utils";
 import ThemeToggle from "./ThemeToggle";
 
-export default function TopBar({ theme, onToggleTheme, hideAmount, onToggleHideAmount }) {
+export default function TopBar({ theme, onToggleTheme, hideAmount, onToggleHideAmount, user, onSignOut }) {
   const { state, dispatch } = useApp();
   const { importFile, exportFile, downloadTemplate } = useExcel();
   const fileInputRef = useRef(null);
@@ -89,6 +89,13 @@ export default function TopBar({ theme, onToggleTheme, hideAmount, onToggleHideA
           <Download className="w-4 h-4" />
           Export
         </button>
+        <button
+          onClick={onSignOut}
+          title={user?.email}
+          className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-white/60 dark:border-gray-700/60 text-gray-500 dark:text-gray-300 hover:text-red-500 hover:scale-110 transition-all"
+        >
+          <LogOut className="w-[18px] h-[18px]" />
+        </button>
       </div>
 
       {/* Mobile actions */}
@@ -132,6 +139,14 @@ export default function TopBar({ theme, onToggleTheme, hideAmount, onToggleHideA
                 >
                   <Download className="w-4 h-4" />
                   Export
+                </button>
+                <div className="border-t border-white/60 dark:border-gray-700/60 my-1" />
+                <button
+                  onClick={() => { onSignOut(); setMenuOpen(false); }}
+                  className="w-full flex items-center gap-2 text-left px-4 py-2.5 text-sm font-light text-red-500 hover:bg-white/60 dark:hover:bg-gray-800/60"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Keluar
                 </button>
               </div>
             </>

@@ -1,0 +1,53 @@
+import { supabase } from "../supabase";
+import { replaceBudgets } from "./budgetsApi";
+import { replaceRecurring } from "./recurringApi";
+import { replaceCustomCategories } from "./categoriesApi";
+
+// Excel import replaces the entire dataset — mirror that as a full
+// delete-then-insert per table, same pattern as the bulk-replace helpers
+// already used for budgets/recurring/categories.
+export async function replaceAllFromExcelImport(userId, payload) {
+  const { transactions, budgets, recurring, customCategories, savingsGoals } = payload;
+
+  const { error: deleteError } = await supabase.from("transactions").delete().eq("user_id", userId);
+  if (deleteError) throw deleteError;
+
+  if (transactions.length > 0) {
+    const rows = transactions.map((t) => ({
+      id: t.id,
+      user_id: userId,
+      date: t.date,
+      category: t.category,
+      subcategory: t.subcategory || "",
+      amount: t.amount,
+      type: t.type,
+      description: t.description || "",
+      is_recurring: t.is_recurring || false,
+      recurring_id: t.recurring_id || null,
+    }));
+    const { error: insertError } = await supabase.from("transactions").insert(rows);
+    if (insertError) throw insertError;
+  }
+
+  const { error: goalsDeleteError } = await supabase.from("savings_goals").delete().eq("user_id", userId);
+  if (goalsDeleteError) throw goalsDeleteError;
+
+  if (savingsGoals && savingsGoals.length > 0) {
+    const goalRows = savingsGoals.map((g) => ({
+      id: g.id,
+      user_id: userId,
+      name: g.name,
+      target_amount: g.targetAmount,
+      current_amount: g.currentAmount,
+      deadline: g.deadline || null,
+    }));
+    const { error: goalsInsertError } = await supabase.from("savings_goals").insert(goalRows);
+    if (goalsInsertError) throw goalsInsertError;
+  }
+
+  await Promise.all([
+    replaceBudgets(userId, budgets),
+    replaceRecurring(userId, recurring),
+    replaceCustomCategories(userId, customCategories || []),
+  ]);
+}
