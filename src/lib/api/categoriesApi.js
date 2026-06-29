@@ -9,6 +9,7 @@ export async function fetchCustomCategories(userId) {
     color: row.color,
     icon: row.icon,
     subcategories: row.subcategories || [],
+    ...(row.overrides_default ? { overridesDefault: row.overrides_default } : {}),
   }));
 }
 
@@ -25,14 +26,15 @@ export async function insertCustomCategory(userId, category) {
 }
 
 export async function upsertCategoryOverride(userId, originalName, category) {
-  // Rename or edit: remove any row under the old name, then insert the
-  // current shape under the new name (handles both in-place edits and
-  // renames the same way, and works whether or not a row already existed).
-  const { error: deleteError } = await supabase
-    .from("custom_categories")
-    .delete()
-    .eq("user_id", userId)
-    .ilike("name", originalName);
+  // Rename or edit: remove the existing row, then insert the current shape
+  // under the new name. For a default-category override, find that row by
+  // `overrides_default` (stable across renames) rather than by `name` —
+  // matching by name would miss it on a second rename and create a
+  // duplicate row instead of replacing it.
+  const deleteQuery = supabase.from("custom_categories").delete().eq("user_id", userId);
+  const { error: deleteError } = category.overridesDefault
+    ? await deleteQuery.ilike("overrides_default", category.overridesDefault)
+    : await deleteQuery.ilike("name", originalName);
   if (deleteError) throw deleteError;
 
   const { error: insertError } = await supabase.from("custom_categories").insert({
@@ -42,6 +44,7 @@ export async function upsertCategoryOverride(userId, originalName, category) {
     color: category.color,
     icon: category.icon,
     subcategories: category.subcategories || [],
+    overrides_default: category.overridesDefault || null,
   });
   if (insertError) throw insertError;
 }

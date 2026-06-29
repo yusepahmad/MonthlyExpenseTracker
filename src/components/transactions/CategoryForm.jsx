@@ -30,6 +30,9 @@ export default function CategoryForm({ type, editingCategory, onSaved, onCancel 
         type: "UPDATE_CATEGORY",
         payload: {
           originalName: editingCategory.name,
+          overridesDefault: editingCategory.isDefault
+            ? editingCategory.overridesDefault || editingCategory.name
+            : undefined,
           name: trimmed,
           type: editingCategory.type,
           color: editingCategory.color,

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useReducer, useRef, useState } from "react";
 import { getCurrentMonth } from "../lib/utils";
-import { makeCustomCategoryColor, CUSTOM_CATEGORY_ICON, isCategoryNameTaken, DEFAULT_CATEGORIES } from "../lib/categories";
+import { makeCustomCategoryColor, CUSTOM_CATEGORY_ICON, isCategoryNameTaken, getCategory } from "../lib/categories";
 import { loadAllData, migrateLocalDataIfNeeded } from "../lib/api";
 import { insertTransaction, updateTransaction as updateTransactionRow, deleteTransaction as deleteTransactionRow } from "../lib/api/transactionsApi";
 import { replaceBudgets } from "../lib/api/budgetsApi";
@@ -94,19 +94,29 @@ function reducer(state, action) {
       return { ...state, customCategories: [...state.customCategories, category] };
     }
     case "UPDATE_CATEGORY": {
-      const { originalName, name, type, color, icon, subcategories } = action.payload;
-      const updated = { name, type, color, icon, subcategories: subcategories || [] };
+      const { originalName, overridesDefault, name, type, color, icon, subcategories } = action.payload;
 
       // Renaming to a name that's already taken by something else isn't allowed.
       if (isCategoryNameTaken(name, state.customCategories, originalName)) return state;
 
-      const existingIndex = state.customCategories.findIndex(
-        (c) => c.name.toLowerCase() === originalName.toLowerCase()
-      );
+      // `overridesDefault` is the stable link to a built-in default category,
+      // passed by the caller (it knows whether it's editing a default-derived
+      // row). Matching by current name would lose track of it across renames.
+      const existingOverride = overridesDefault
+        ? state.customCategories.find((c) => (c.overridesDefault || "").toLowerCase() === overridesDefault.toLowerCase())
+        : state.customCategories.find((c) => c.name.toLowerCase() === originalName.toLowerCase());
 
-      if (existingIndex >= 0) {
-        const next = [...state.customCategories];
-        next[existingIndex] = updated;
+      const updated = {
+        name,
+        type,
+        color,
+        icon,
+        subcategories: subcategories || [],
+        ...(overridesDefault ? { overridesDefault } : {}),
+      };
+
+      if (existingOverride) {
+        const next = state.customCategories.map((c) => (c === existingOverride ? updated : c));
         return { ...state, customCategories: next };
       }
 
@@ -116,8 +126,8 @@ function reducer(state, action) {
     }
     case "DELETE_CATEGORY": {
       const name = action.payload;
-      const isDefault = DEFAULT_CATEGORIES.some((d) => d.name.toLowerCase() === name.toLowerCase());
-      if (isDefault) return state; // default categories can be edited, not removed
+      const target = getCategory(name, state.customCategories);
+      if (!target || target.isDefault) return state; // default categories (even renamed) can be edited, not removed
       return {
         ...state,
         customCategories: state.customCategories.filter((c) => c.name.toLowerCase() !== name.toLowerCase()),

@@ -48,6 +48,9 @@ create table if not exists custom_categories (
   color text default '#6B7280',
   icon text default 'Tag',
   subcategories text[] default '{}',
+  -- Set when this row overrides a built-in default category, holding the
+  -- default's original (stable) name so renames don't lose the link to it.
+  overrides_default text,
   created_at timestamptz default now(),
   primary key (id),
   unique (user_id, name)

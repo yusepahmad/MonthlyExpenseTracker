@@ -36,24 +36,25 @@ function normalizeName(name) {
 }
 
 // customCategories can both ADD brand-new categories and OVERRIDE a default
-// category's color/icon/subcategories (matched by name, case-insensitive).
-// This lets users edit "Makan"'s subcategories without duplicating it.
+// category's name/color/icon/subcategories. Overrides are matched by the
+// stable `overridesDefault` key (the default category's original name) —
+// NOT by the override's current `name` — so renaming a default category
+// (e.g. "Makan" -> "Makan & Minuman") still replaces it instead of leaving
+// the old default behind and creating a duplicate.
 export function getAllCategories(customCategories = []) {
-  const overridesByName = new Map();
+  const overridesByKey = new Map();
   const newCategories = [];
 
   for (const c of customCategories) {
-    const key = normalizeName(c.name);
-    const isOverrideOfDefault = DEFAULT_CATEGORIES.some((d) => normalizeName(d.name) === key);
-    if (isOverrideOfDefault) {
-      overridesByName.set(key, c);
+    if (c.overridesDefault) {
+      overridesByKey.set(normalizeName(c.overridesDefault), c);
     } else {
       newCategories.push(c);
     }
   }
 
   const merged = DEFAULT_CATEGORIES.map((d) => {
-    const override = overridesByName.get(normalizeName(d.name));
+    const override = overridesByKey.get(normalizeName(d.name));
     return override ? { ...d, ...override, isDefault: true } : { ...d, isDefault: true };
   });
 

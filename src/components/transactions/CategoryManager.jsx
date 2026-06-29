@@ -30,6 +30,7 @@ function AddSubcategoryForm({ categories, onDone }) {
       type: "UPDATE_CATEGORY",
       payload: {
         originalName: selected.name,
+        overridesDefault: selected.isDefault ? selected.overridesDefault || selected.name : undefined,
         name: selected.name,
         type: selected.type,
         color: selected.color,
