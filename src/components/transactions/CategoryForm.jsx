@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { useApp } from "../../context/AppContext";
-import { makeCustomCategoryColor } from "../../lib/categories";
 import Icon, { PICKABLE_ICONS } from "../ui/Icon";
 
 export default function CategoryForm({ type, editingCategory, onSaved, onCancel }) {
-  const { state, dispatch } = useApp();
+  const { dispatch } = useApp();
   const isEdit = Boolean(editingCategory);
 
   const [name, setName] = useState(editingCategory?.name || "");
@@ -50,7 +49,6 @@ export default function CategoryForm({ type, editingCategory, onSaved, onCancel 
         type,
         icon,
         subcategories,
-        color: makeCustomCategoryColor(state.customCategories.length),
       },
     });
     setError("");

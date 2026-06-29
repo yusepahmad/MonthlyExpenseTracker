@@ -88,7 +88,7 @@ function reducer(state, action) {
         name,
         type,
         subcategories: subcategories || [],
-        color: makeCustomCategoryColor(state.customCategories.length),
+        color: makeCustomCategoryColor(state.customCategories, name),
         icon: icon || CUSTOM_CATEGORY_ICON,
       };
       return { ...state, customCategories: [...state.customCategories, category] };

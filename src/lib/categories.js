@@ -14,7 +14,22 @@ export const DEFAULT_CATEGORIES = [
   { name: "Bonus", color: "#F97316", icon: "Star", type: "income", subcategories: [] },
 ];
 
-const FALLBACK_COLORS = ["#0D9488", "#D946EF", "#F43F5E", "#65A30D", "#0284C7", "#CA8A04"];
+const FALLBACK_COLORS = [
+  "#0D9488", "#D946EF", "#F43F5E", "#65A30D", "#0284C7", "#CA8A04",
+  "#7C3AED", "#DB2777", "#059669", "#EA580C", "#4F46E5", "#0891B2",
+  "#B91C1C", "#15803D", "#9333EA", "#C2410C",
+];
+
+// Deterministic hash fallback once the curated palette is exhausted —
+// guarantees *a* color rather than reusing one, even with 100+ categories.
+function hashColor(seed) {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  const hue = hash % 360;
+  return `hsl(${hue}, 65%, 50%)`;
+}
 
 function normalizeName(name) {
   return (name || "").trim().toLowerCase();
@@ -64,8 +79,21 @@ export function isCategoryNameTaken(name, customCategories = [], excludeName = n
   return getAllCategories(customCategories).some((c) => normalizeName(c.name) === key);
 }
 
-export function makeCustomCategoryColor(index) {
-  return FALLBACK_COLORS[index % FALLBACK_COLORS.length];
+// Picks a color not already used by any existing category (default or
+// custom), so chart segments never collide. Falls back to a deterministic
+// hash-based color once the curated palette is exhausted.
+export function makeCustomCategoryColor(customCategories = [], seed = "") {
+  const usedColors = new Set(getAllCategories(customCategories).map((c) => c.color));
+  const free = FALLBACK_COLORS.find((color) => !usedColors.has(color));
+  if (free) return free;
+
+  let candidate = hashColor(seed || String(Date.now()));
+  let attempt = 0;
+  while (usedColors.has(candidate) && attempt < 20) {
+    candidate = hashColor(`${seed}-${attempt}`);
+    attempt += 1;
+  }
+  return candidate;
 }
 
 export const CUSTOM_CATEGORY_ICON = "Tag";

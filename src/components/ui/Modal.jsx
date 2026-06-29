@@ -1,9 +1,10 @@
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 export default function Modal({ open, onClose, title, children }) {
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -22,6 +23,7 @@ export default function Modal({ open, onClose, title, children }) {
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
