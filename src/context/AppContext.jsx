@@ -193,7 +193,7 @@ function reducer(state, action) {
     case "SET_ALLOCATION_SETTINGS":
       return { ...state, allocationSettings: action.payload };
     case "ADD_CATEGORY": {
-      const { name, type, subcategories, icon } = action.payload;
+      const { name, type, subcategories, icon, isEssential } = action.payload;
       if (isCategoryNameTaken(name, state.customCategories)) return state;
       const category = {
         name,
@@ -201,11 +201,12 @@ function reducer(state, action) {
         subcategories: subcategories || [],
         color: makeCustomCategoryColor(state.customCategories, name),
         icon: icon || CUSTOM_CATEGORY_ICON,
+        ...(type === "expense" ? { isEssential: isEssential ?? true } : {}),
       };
       return { ...state, customCategories: [...state.customCategories, category] };
     }
     case "UPDATE_CATEGORY": {
-      const { originalName, overridesDefault, name, type, color, icon, subcategories } = action.payload;
+      const { originalName, overridesDefault, name, type, color, icon, subcategories, isEssential } = action.payload;
 
       // Renaming to a name that's already taken by something else isn't allowed.
       if (isCategoryNameTaken(name, state.customCategories, originalName)) return state;
@@ -224,6 +225,7 @@ function reducer(state, action) {
         icon,
         subcategories: subcategories || [],
         ...(overridesDefault ? { overridesDefault } : {}),
+        ...(type === "expense" ? { isEssential: isEssential ?? true } : {}),
       };
 
       if (existingOverride) {

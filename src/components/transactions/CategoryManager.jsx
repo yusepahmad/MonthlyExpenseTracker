@@ -36,6 +36,7 @@ function AddSubcategoryForm({ categories, onDone }) {
         color: selected.color,
         icon: selected.icon,
         subcategories: [...selected.subcategories, trimmed],
+        isEssential: selected.isEssential,
       },
     });
     setSubName("");
@@ -149,6 +150,11 @@ export default function CategoryManager() {
                   </p>
                 )}
               </div>
+              {category.type === "expense" && category.isEssential === false && (
+                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 shrink-0">
+                  Non-Esensial
+                </span>
+              )}
               {category.isDefault && (
                 <Lock className="w-3 h-3 text-gray-300 shrink-0" title="Default — hanya bisa diedit" />
               )}

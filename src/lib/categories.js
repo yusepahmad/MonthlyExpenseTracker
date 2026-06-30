@@ -1,12 +1,16 @@
+// isEssential only matters for expense categories — drives the "Insight
+// Pemborosan" feature (waste/overspend insight). Default mapping below is
+// just a sensible starting point; the user can re-tag any category via
+// CategoryForm.
 export const DEFAULT_CATEGORIES = [
-  { name: "Makan", color: "#F59E0B", icon: "Utensils", type: "expense", subcategories: ["Restoran", "Warung", "Kafe", "Snack"] },
-  { name: "Transport", color: "#3B82F6", icon: "Car", type: "expense", subcategories: ["Bensin", "Parkir", "Ojek/Taksi", "Tol"] },
-  { name: "Belanja", color: "#8B5CF6", icon: "ShoppingBag", type: "expense", subcategories: ["Pakaian", "Elektronik", "Kebutuhan Rumah"] },
-  { name: "Hiburan", color: "#EC4899", icon: "Gamepad2", type: "expense", subcategories: ["Streaming", "Game", "Nonton", "Hobi"] },
-  { name: "Kesehatan", color: "#10B981", icon: "Pill", type: "expense", subcategories: ["Obat", "Dokter", "Vitamin"] },
-  { name: "Tagihan", color: "#EF4444", icon: "Receipt", type: "expense", subcategories: ["Listrik", "Air", "Internet", "Pulsa"] },
-  { name: "Pendidikan", color: "#06B6D4", icon: "BookOpen", type: "expense", subcategories: ["Kursus", "Buku", "SPP"] },
-  { name: "Lainnya", color: "#6B7280", icon: "Package", type: "expense", subcategories: [] },
+  { name: "Makan", color: "#F59E0B", icon: "Utensils", type: "expense", subcategories: ["Restoran", "Warung", "Kafe", "Snack"], isEssential: true },
+  { name: "Transport", color: "#3B82F6", icon: "Car", type: "expense", subcategories: ["Bensin", "Parkir", "Ojek/Taksi", "Tol"], isEssential: true },
+  { name: "Belanja", color: "#8B5CF6", icon: "ShoppingBag", type: "expense", subcategories: ["Pakaian", "Elektronik", "Kebutuhan Rumah"], isEssential: false },
+  { name: "Hiburan", color: "#EC4899", icon: "Gamepad2", type: "expense", subcategories: ["Streaming", "Game", "Nonton", "Hobi"], isEssential: false },
+  { name: "Kesehatan", color: "#10B981", icon: "Pill", type: "expense", subcategories: ["Obat", "Dokter", "Vitamin"], isEssential: true },
+  { name: "Tagihan", color: "#EF4444", icon: "Receipt", type: "expense", subcategories: ["Listrik", "Air", "Internet", "Pulsa"], isEssential: true },
+  { name: "Pendidikan", color: "#06B6D4", icon: "BookOpen", type: "expense", subcategories: ["Kursus", "Buku", "SPP"], isEssential: true },
+  { name: "Lainnya", color: "#6B7280", icon: "Package", type: "expense", subcategories: [], isEssential: false },
   { name: "Gaji", color: "#22C55E", icon: "Briefcase", type: "income", subcategories: [] },
   { name: "Freelance", color: "#84CC16", icon: "Laptop", type: "income", subcategories: [] },
   { name: "Piket", color: "#0EA5E9", icon: "Clock", type: "income", subcategories: [] },
@@ -58,7 +62,14 @@ export function getAllCategories(customCategories = []) {
     return override ? { ...d, ...override, isDefault: true } : { ...d, isDefault: true };
   });
 
-  return [...merged, ...newCategories.map((c) => ({ ...c, isDefault: false }))];
+  return [
+    ...merged,
+    ...newCategories.map((c) => ({
+      ...c,
+      isDefault: false,
+      isEssential: c.isEssential ?? true, // default to essential so new categories aren't mislabeled as waste
+    })),
+  ];
 }
 
 export function getCategory(name, customCategories = []) {

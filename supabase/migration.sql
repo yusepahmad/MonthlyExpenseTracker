@@ -70,6 +70,9 @@ create table if not exists custom_categories (
   -- Set when this row overrides a built-in default category, holding the
   -- default's original (stable) name so renames don't lose the link to it.
   overrides_default text,
+  -- Only meaningful for expense categories — drives the "Insight
+  -- Pemborosan" (waste/overspend) feature. Null for income categories.
+  is_essential boolean,
   created_at timestamptz default now(),
   primary key (id),
   unique (user_id, name)

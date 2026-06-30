@@ -11,7 +11,10 @@ export default function CategoryForm({ type, editingCategory, onSaved, onCancel 
     (editingCategory?.subcategories || []).join(", ")
   );
   const [icon, setIcon] = useState(editingCategory?.icon || PICKABLE_ICONS[0]);
+  const [isEssential, setIsEssential] = useState(editingCategory?.isEssential ?? true);
   const [error, setError] = useState("");
+
+  const categoryType = isEdit ? editingCategory.type : type;
 
   function handleSubmit() {
     const trimmed = name.trim();
@@ -38,6 +41,7 @@ export default function CategoryForm({ type, editingCategory, onSaved, onCancel 
           color: editingCategory.color,
           icon,
           subcategories,
+          isEssential: editingCategory.type === "expense" ? isEssential : undefined,
         },
       });
       setError("");
@@ -52,6 +56,7 @@ export default function CategoryForm({ type, editingCategory, onSaved, onCancel 
         type,
         icon,
         subcategories,
+        isEssential: type === "expense" ? isEssential : undefined,
       },
     });
     setError("");
@@ -114,6 +119,42 @@ export default function CategoryForm({ type, editingCategory, onSaved, onCancel 
           className="w-full px-3 py-2.5 rounded-xl border border-white/60 dark:border-gray-700/60 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm font-light text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-300/60"
         />
       </div>
+
+      {categoryType === "expense" && (
+        <div>
+          <label className="block text-sm font-light text-gray-600 dark:text-gray-300 mb-1.5">
+            Jenis Pengeluaran
+          </label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setIsEssential(true)}
+              className={`flex-1 py-2 rounded-xl text-xs font-medium transition-all duration-200 ${
+                isEssential
+                  ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-glow-green"
+                  : "bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm border border-white/60 dark:border-gray-700/60 text-gray-500 dark:text-gray-300"
+              }`}
+            >
+              Esensial
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsEssential(false)}
+              className={`flex-1 py-2 rounded-xl text-xs font-medium transition-all duration-200 ${
+                !isEssential
+                  ? "bg-gradient-to-r from-amber-500 to-orange-400 text-white shadow-glow"
+                  : "bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm border border-white/60 dark:border-gray-700/60 text-gray-500 dark:text-gray-300"
+              }`}
+            >
+              Non-Esensial
+            </button>
+          </div>
+          <p className="text-xs font-light text-gray-400 mt-1.5">
+            Non-esensial dipakai untuk insight pemborosan — kebutuhan vs keinginan.
+          </p>
+        </div>
+      )}
+
       <div className="flex gap-2">
         <button
           type="button"

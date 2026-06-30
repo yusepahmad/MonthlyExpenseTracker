@@ -48,6 +48,21 @@ Di luar 13 fase asli — diminta user setelah Fase 12 selesai, supaya app aktif 
 
 Diverifikasi langsung: pemasukan otomatis ter-allocate 20/10/70 tanpa tagging apapun; set nilai investasi Rp500rb vs. total teralokasi Rp662rb → benar muncul "Rugi Rp -162.006,3 (-24,5%)".
 
-## Status: plan 13-fase selesai + 1 fitur tambahan
+## Fitur pasca-plan: Insight Pemborosan
+
+Lanjutan dari goal *financial freedom* user — "uang yang disia-siakan" didefinisikan jadi 3 hal konkret: (1) pengeluaran non-esensial yang membengkak vs rata-rata, (2) total kelebihan budget bulan ini, (3) subscription/recurring yang sudah lama jalan (≥3 bulan) — reminder "masih dipakai?".
+
+**Kategori esensial vs non-esensial**: user tandai sendiri per kategori expense (toggle "Esensial"/"Non-Esensial" di `CategoryForm.jsx`, badge kuning "Non-Esensial" muncul di `CategoryManager.jsx`). Default kategori bawaan: Makan/Transport/Kesehatan/Tagihan/Pendidikan = esensial; Belanja/Hiburan/Lainnya = non-esensial. Kategori custom baru default `isEssential: true` (supaya tidak salah-flag sebagai boros). Field `isEssential` ikut pola override `categories.js` yang sudah ada (kolom `is_essential` baru di `custom_categories`, `supabase/migration_009_is_essential.sql`).
+
+**Bug yang sempat ditemukan saat membangun ini**: `AddSubcategoryForm` di `CategoryManager.jsx` (fitur "+ Tambah Sub-kategori") tidak meneruskan `isEssential` saat dispatch `UPDATE_CATEGORY` — karena reducer punya default `isEssential ?? true`, ini akan diam-diam me-reset kategori non-esensial manapun balik jadi esensial begitu ditambah sub-kategori. Sudah diperbaiki dengan eksplisit meneruskan `selected.isEssential`.
+
+**File kunci**:
+- `lib/wasteInsight.js` — 3 fungsi murni: `nonEssentialTrend()` (bandingkan bulan ini vs rata-rata 3 bulan lalu, exclude kategori esensial), `totalBudgetOverspend()` (sum kelebihan dari `useBudget` rows yang over), `subscriptionsToReview()` (recurring aktif dengan ≥3 bulan transaksi ter-log, dihitung dari riwayat transaksi aktual — bukan tanggal dibuat, karena recurring tidak punya field itu).
+- `hooks/useWasteInsight.js` — wrapper hook gabung ketiganya.
+- `components/dashboard/WasteInsightCard.jsx` — card di Dashboard, **sengaja tidak render apapun kalau tidak ada insight** (tidak ada overspend, tidak ada lonjakan non-esensial, tidak ada subscription ≥3 bulan) — supaya tidak menampilkan insight kosong/menyesatkan untuk user baru dengan sedikit data.
+
+Diverifikasi via unit test logic langsung (`nonEssentialTrend`, `totalBudgetOverspend`, `subscriptionsToReview` — semua benar menghitung rata-rata, exclude esensial, dan threshold 3 bulan) karena akun live belum punya cukup riwayat data (1 bulan transaksi, belum ada budget diset) untuk memicu kondisi insight secara natural — perilaku card menyembunyikan diri saat itu sudah dikonfirmasi benar (bukan bug).
+
+## Status: plan 13-fase selesai + 3 fitur tambahan
 
 Tidak ada fase tersisa dari plan asli. Untuk kelanjutan, baca file plan di atas untuk konteks desain sebelumnya, atau tanya user fitur/perbaikan baru apa yang diinginkan.

@@ -10,6 +10,7 @@ export async function fetchCustomCategories(userId) {
     icon: row.icon,
     subcategories: row.subcategories || [],
     ...(row.overrides_default ? { overridesDefault: row.overrides_default } : {}),
+    ...(row.type === "expense" ? { isEssential: row.is_essential ?? true } : {}),
   }));
 }
 
@@ -21,6 +22,7 @@ export async function insertCustomCategory(userId, category) {
     color: category.color,
     icon: category.icon,
     subcategories: category.subcategories || [],
+    is_essential: category.type === "expense" ? category.isEssential ?? true : null,
   });
   if (error) throw error;
 }
@@ -45,6 +47,7 @@ export async function upsertCategoryOverride(userId, originalName, category) {
     icon: category.icon,
     subcategories: category.subcategories || [],
     overrides_default: category.overridesDefault || null,
+    is_essential: category.type === "expense" ? category.isEssential ?? true : null,
   });
   if (insertError) throw insertError;
 }

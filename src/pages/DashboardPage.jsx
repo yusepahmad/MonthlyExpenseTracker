@@ -10,6 +10,7 @@ import InsightMessages from "../components/dashboard/InsightMessages";
 import CashFlowPredictionCard from "../components/dashboard/CashFlowPredictionCard";
 import HealthScoreCard from "../components/dashboard/HealthScoreCard";
 import AllocationSummaryCard from "../components/dashboard/AllocationSummaryCard";
+import WasteInsightCard from "../components/dashboard/WasteInsightCard";
 import Dropdown from "../components/ui/Dropdown";
 import Icon from "../components/ui/Icon";
 
@@ -31,6 +32,8 @@ export default function DashboardPage({ hideAmount }) {
       <MonthSummary hideAmount={hideAmount} />
 
       <AllocationSummaryCard hideAmount={hideAmount} />
+
+      <WasteInsightCard />
 
       <InsightCards hideAmount={hideAmount} />
 
