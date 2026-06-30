@@ -1,4 +1,4 @@
-import { LayoutDashboard, ArrowLeftRight, Target, Repeat, BarChart3, PiggyBank, Gift } from "lucide-react";
+import { LayoutDashboard, ArrowLeftRight, Target, Repeat, BarChart3, PiggyBank, Gift, Wallet } from "lucide-react";
 
 const NAV_ITEMS = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { key: "reports", label: "Laporan", icon: BarChart3 },
   { key: "savings", label: "Tabungan", icon: PiggyBank },
   { key: "wishlist", label: "Wishlist", icon: Gift },
+  { key: "accounts", label: "Akun", icon: Wallet },
 ];
 
 export default function BottomNav({ activePage, onNavigate }) {

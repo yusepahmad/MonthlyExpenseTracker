@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { useApp } from "../../context/AppContext";
 import { getCategory } from "../../lib/categories";
+import { excludeTransfers } from "../../lib/utils";
 import EmptyState from "../ui/EmptyState";
 import AmountText from "../ui/AmountText";
 
@@ -12,7 +13,7 @@ export default function CategoryChart({ hideAmount, categoryFilter = "all" }) {
 
   const data = useMemo(() => {
     const byCategory = {};
-    state.transactions
+    excludeTransfers(state.transactions)
       .filter((t) => t.type === "expense" && t.date.startsWith(state.activeMonth))
       .filter((t) => categoryFilter === "all" || t.category === categoryFilter)
       .forEach((t) => {

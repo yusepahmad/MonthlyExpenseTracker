@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { useApp } from "../../context/AppContext";
+import { useApp, DEFAULT_ACCOUNT_ID } from "../../context/AppContext";
 import { getCategoriesByType, getSubcategories } from "../../lib/categories";
 import { generateId, formatNumberInput, parseNumberInput } from "../../lib/utils";
 import { suggestCategory } from "../../lib/categoryKeywords";
 import { findSimilarRecentTransaction } from "../../lib/smartSuggestion";
 import CategoryForm from "./CategoryForm";
 import CategoryManager from "./CategoryManager";
+import TransferForm from "./TransferForm";
 import Dropdown from "../ui/Dropdown";
 import DatePicker from "../ui/DatePicker";
 import Modal from "../ui/Modal";
@@ -22,6 +23,7 @@ export function createBlankDraft() {
     amount: "",
     type: "expense",
     description: "",
+    account: DEFAULT_ACCOUNT_ID,
     categoryTouched: false,
   };
 }
@@ -34,6 +36,7 @@ function transactionToFormState(transaction) {
     amount: formatNumberInput(String(transaction.amount)),
     type: transaction.type,
     description: transaction.description || "",
+    account: transaction.account || DEFAULT_ACCOUNT_ID,
     categoryTouched: true,
   };
 }
@@ -55,6 +58,7 @@ export default function TransactionForm({ onSaved, onDiscard, editingTransaction
   const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [dismissedSuggestion, setDismissedSuggestion] = useState(false);
+  const [mode, setMode] = useState("transaction");
 
   const categoriesForType = getCategoriesByType(form.type, state.customCategories);
   const subcategories = getSubcategories(form.category, state.customCategories);
@@ -125,6 +129,7 @@ export default function TransactionForm({ onSaved, onDiscard, editingTransaction
           amount,
           type: form.type,
           description: form.description,
+          account: form.account,
         },
       });
     } else {
@@ -138,6 +143,7 @@ export default function TransactionForm({ onSaved, onDiscard, editingTransaction
           amount,
           type: form.type,
           description: form.description,
+          account: form.account,
           is_recurring: false,
           recurring_id: null,
         },
@@ -149,6 +155,29 @@ export default function TransactionForm({ onSaved, onDiscard, editingTransaction
 
   const hasDraftContent =
     !isEdit && (form.amount || form.description || form.subcategory || form.date !== todayStr());
+
+  if (mode === "transfer") {
+    return (
+      <div className="space-y-3">
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setMode("transaction")}
+            className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm border border-white/60 dark:border-gray-700/60 text-gray-500 dark:text-gray-300 transition-all duration-200"
+          >
+            Transaksi
+          </button>
+          <button
+            type="button"
+            className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-glow scale-[1.02] transition-all duration-200"
+          >
+            Transfer
+          </button>
+        </div>
+        <TransferForm onSaved={onSaved} />
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
@@ -181,6 +210,15 @@ export default function TransactionForm({ onSaved, onDiscard, editingTransaction
         >
           Pemasukan
         </button>
+        {!isEdit && (
+          <button
+            type="button"
+            onClick={() => setMode("transfer")}
+            className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm border border-white/60 dark:border-gray-700/60 text-gray-500 dark:text-gray-300 transition-all duration-200"
+          >
+            Transfer
+          </button>
+        )}
       </div>
 
       <div>
@@ -191,6 +229,17 @@ export default function TransactionForm({ onSaved, onDiscard, editingTransaction
           value={form.date}
           max={todayStr()}
           onChange={(value) => setForm((f) => ({ ...f, date: value }))}
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1.5">
+          Akun
+        </label>
+        <Dropdown
+          value={form.account}
+          onChange={(value) => setForm((f) => ({ ...f, account: value }))}
+          options={state.accounts.map((a) => ({ value: a.id, label: a.name }))}
         />
       </div>
 

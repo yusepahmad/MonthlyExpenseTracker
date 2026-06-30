@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useApp } from "../context/AppContext";
-import { startOfWeek, toDateStr } from "../lib/utils";
+import { startOfWeek, toDateStr, excludeTransfers } from "../lib/utils";
 
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 
@@ -89,7 +89,8 @@ export function useReportData(period, referenceDate = new Date()) {
   const { state } = useApp();
 
   return useMemo(() => {
-    const periodTransactions = filterByPeriod(state.transactions, period, referenceDate);
+    const realTransactions = excludeTransfers(state.transactions);
+    const periodTransactions = filterByPeriod(realTransactions, period, referenceDate);
 
     const totalExpense = periodTransactions
       .filter((t) => t.type === "expense")
@@ -102,11 +103,11 @@ export function useReportData(period, referenceDate = new Date()) {
 
     let series;
     if (period === "week") {
-      series = buildDailySeries(state.transactions, referenceDate);
+      series = buildDailySeries(realTransactions, referenceDate);
     } else if (period === "year") {
-      series = buildMonthlySeries(state.transactions, referenceDate.getFullYear());
+      series = buildMonthlySeries(realTransactions, referenceDate.getFullYear());
     } else {
-      series = buildDailyOfMonthSeries(state.transactions, referenceDate);
+      series = buildDailyOfMonthSeries(realTransactions, referenceDate);
     }
 
     return { totalExpense, totalIncome, categoryTotals, series };

@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { key: "reports", label: "Laporan", icon: BarChart3 },
   { key: "savings", label: "Tabungan", icon: PiggyBank },
   { key: "wishlist", label: "Wishlist", icon: Gift },
+  { key: "accounts", label: "Akun", icon: Wallet },
 ];
 
 export default function Sidebar({ activePage, onNavigate, collapsed, onToggleCollapse }) {

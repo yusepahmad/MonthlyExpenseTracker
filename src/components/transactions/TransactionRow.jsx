@@ -10,6 +10,7 @@ import AmountText from "../ui/AmountText";
 export default function TransactionRow({ transaction, onEdit, hideAmount }) {
   const { state, dispatch } = useApp();
   const category = getCategory(transaction.category, state.customCategories);
+  const account = state.accounts.find((a) => a.id === transaction.account);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   function handleDelete() {
@@ -33,6 +34,7 @@ export default function TransactionRow({ transaction, onEdit, hideAmount }) {
         <p className="text-xs font-light text-gray-400 mt-0.5">
           {formatDate(transaction.date)}
           {transaction.subcategory && <span> · {transaction.subcategory}</span>}
+          {state.accounts.length > 1 && account && <span> · {account.name}</span>}
         </p>
       </div>
 

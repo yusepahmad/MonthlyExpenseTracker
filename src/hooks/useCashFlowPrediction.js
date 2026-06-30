@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useApp } from "../context/AppContext";
+import { excludeTransfers } from "../lib/utils";
 
 const LOOKBACK_DAYS = 30;
 
@@ -7,6 +8,9 @@ export function useCashFlowPrediction() {
   const { state } = useApp();
 
   return useMemo(() => {
+    // Transfer legs cancel out exactly in this sum (one +amount, one
+    // -amount), so balance is correct either way — but burn-rate below
+    // sums expense/income separately and must exclude them explicitly.
     const balance = state.transactions.reduce(
       (sum, t) => sum + (t.type === "income" ? Number(t.amount) : -Number(t.amount)),
       0
@@ -17,7 +21,7 @@ export function useCashFlowPrediction() {
     cutoff.setDate(cutoff.getDate() - LOOKBACK_DAYS);
     const cutoffStr = cutoff.toISOString().slice(0, 10);
 
-    const recentTransactions = state.transactions.filter((t) => t.date >= cutoffStr);
+    const recentTransactions = excludeTransfers(state.transactions).filter((t) => t.date >= cutoffStr);
     const recentExpense = recentTransactions
       .filter((t) => t.type === "expense")
       .reduce((sum, t) => sum + Number(t.amount), 0);

@@ -8,8 +8,12 @@ import { insertRecurring, updateRecurring as updateRecurringRow, deleteRecurring
 import { insertCustomCategory, upsertCategoryOverride, deleteCustomCategory } from "../lib/api/categoriesApi";
 import { insertSavingsGoal, updateSavingsGoal as updateSavingsGoalRow, deleteSavingsGoal as deleteSavingsGoalRow } from "../lib/api/savingsGoalsApi";
 import { insertWishlistItem, updateWishlistItem as updateWishlistItemRow, deleteWishlistItem as deleteWishlistItemRow } from "../lib/api/wishlistApi";
+import { insertAccount, updateAccount as updateAccountRow, deleteAccount as deleteAccountRow } from "../lib/api/accountsApi";
 import { saveActiveMonth } from "../lib/api/settingsApi";
 import { replaceAllFromExcelImport } from "../lib/api/bulkApi";
+
+export const DEFAULT_ACCOUNT_ID = "acc_cash";
+const DEFAULT_ACCOUNT = { id: DEFAULT_ACCOUNT_ID, name: "Cash", isDefault: true };
 
 const baseState = {
   transactions: [],
@@ -18,36 +22,54 @@ const baseState = {
   customCategories: [],
   savingsGoals: [],
   wishlist: [],
+  accounts: [DEFAULT_ACCOUNT],
   activeMonth: getCurrentMonth(),
   fileName: null,
 };
+
+// Old transactions (pre-Phase 9, local or cloud) have no `account` field —
+// default them to Cash so every transaction always has a valid account.
+function withAccountFallback(transactions) {
+  return transactions.map((t) => (t.account ? t : { ...t, account: DEFAULT_ACCOUNT_ID }));
+}
+
+function withDefaultAccountSeed(accounts) {
+  if (!accounts || accounts.length === 0) return [DEFAULT_ACCOUNT];
+  if (accounts.some((a) => a.id === DEFAULT_ACCOUNT_ID)) return accounts;
+  return [DEFAULT_ACCOUNT, ...accounts];
+}
 
 function reducer(state, action) {
   switch (action.type) {
     case "LOAD_FROM_EXCEL":
       return {
         ...state,
-        transactions: action.payload.transactions,
+        transactions: withAccountFallback(action.payload.transactions),
         budgets: action.payload.budgets,
         recurring: action.payload.recurring,
         customCategories: action.payload.customCategories || state.customCategories,
         savingsGoals: action.payload.savingsGoals || state.savingsGoals,
         wishlist: action.payload.wishlist || state.wishlist,
+        accounts: withDefaultAccountSeed(action.payload.accounts || state.accounts),
         fileName: action.payload.fileName,
       };
     case "LOAD_FROM_CLOUD":
       return {
         ...state,
-        transactions: action.payload.transactions,
+        transactions: withAccountFallback(action.payload.transactions),
         budgets: action.payload.budgets,
         recurring: action.payload.recurring,
         customCategories: action.payload.customCategories,
         savingsGoals: action.payload.savingsGoals,
+        accounts: withDefaultAccountSeed(action.payload.accounts),
         wishlist: action.payload.wishlist || [],
         activeMonth: action.payload.activeMonth || state.activeMonth,
       };
     case "ADD_TRANSACTION":
-      return { ...state, transactions: [...state.transactions, action.payload] };
+      return {
+        ...state,
+        transactions: [...state.transactions, { ...action.payload, account: action.payload.account || DEFAULT_ACCOUNT_ID }],
+      };
     case "UPDATE_TRANSACTION":
       return {
         ...state,
@@ -57,6 +79,36 @@ function reducer(state, action) {
       };
     case "DELETE_TRANSACTION":
       return { ...state, transactions: state.transactions.filter((t) => t.id !== action.payload) };
+    // A transfer between the user's own accounts is two linked transactions
+    // (expense leg in the source account, income leg in the destination)
+    // sharing a transfer_id — not a third transaction "type". This lets
+    // every existing expense/income total stay correct without special-
+    // casing transfers anywhere else: the two legs net to zero overall.
+    case "ADD_TRANSFER": {
+      const { fromAccount, toAccount, fromTransaction, toTransaction } = action.payload;
+      return {
+        ...state,
+        transactions: [
+          ...state.transactions,
+          { ...fromTransaction, account: fromAccount },
+          { ...toTransaction, account: toAccount },
+        ],
+      };
+    }
+    case "ADD_ACCOUNT":
+      return { ...state, accounts: [...state.accounts, action.payload] };
+    case "UPDATE_ACCOUNT":
+      return {
+        ...state,
+        accounts: state.accounts.map((a) => (a.id === action.payload.id ? { ...a, ...action.payload } : a)),
+      };
+    case "DELETE_ACCOUNT": {
+      const id = action.payload;
+      if (id === DEFAULT_ACCOUNT_ID) return state; // default Cash account can't be removed
+      const stillInUse = state.transactions.some((t) => t.account === id);
+      if (stillInUse) return state; // reassign or delete those transactions first
+      return { ...state, accounts: state.accounts.filter((a) => a.id !== id) };
+    }
     case "SET_BUDGETS":
       return { ...state, budgets: action.payload };
     case "SET_RECURRING":
@@ -190,6 +242,17 @@ function syncToCloud(userId, action) {
         return updateWishlistItemRow(userId, action.payload);
       case "DELETE_WISHLIST_ITEM":
         return deleteWishlistItemRow(userId, action.payload);
+      case "ADD_TRANSFER":
+        return Promise.all([
+          insertTransaction(userId, { ...action.payload.fromTransaction, account: action.payload.fromAccount }),
+          insertTransaction(userId, { ...action.payload.toTransaction, account: action.payload.toAccount }),
+        ]);
+      case "ADD_ACCOUNT":
+        return insertAccount(userId, action.payload);
+      case "UPDATE_ACCOUNT":
+        return updateAccountRow(userId, action.payload);
+      case "DELETE_ACCOUNT":
+        return deleteAccountRow(userId, action.payload);
       case "ADD_CATEGORY":
         return insertCustomCategory(userId, action.payload);
       case "UPDATE_CATEGORY":

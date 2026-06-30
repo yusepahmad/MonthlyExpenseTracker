@@ -45,6 +45,8 @@ function toRow(userId, t) {
     description: t.description || "",
     is_recurring: t.is_recurring || false,
     recurring_id: t.recurring_id || null,
+    account: t.account || "acc_cash",
+    transfer_id: t.transfer_id || null,
   };
 }
 
@@ -59,5 +61,7 @@ function fromRow(row) {
     description: row.description || "",
     is_recurring: row.is_recurring,
     recurring_id: row.recurring_id,
+    account: row.account || "acc_cash",
+    transfer_id: row.transfer_id || null,
   };
 }

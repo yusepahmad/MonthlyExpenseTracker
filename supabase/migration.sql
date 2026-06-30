@@ -1,6 +1,15 @@
 -- Monthly Expense Tracker — Initial schema
 -- Run this once in Supabase SQL Editor (Dashboard > SQL Editor > New query)
 
+create table if not exists accounts (
+  id text not null,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  is_default boolean default false,
+  created_at timestamptz default now(),
+  primary key (id, user_id)
+);
+
 create table if not exists transactions (
   id text not null,
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -12,6 +21,13 @@ create table if not exists transactions (
   description text default '',
   is_recurring boolean default false,
   recurring_id text,
+  -- References accounts.id (not a foreign key — accounts are created
+  -- lazily/per-user and the default "Cash" account is seeded in app code,
+  -- not guaranteed to exist in the DB before the first transaction does).
+  account text not null default 'acc_cash',
+  -- Set on both legs of a transfer between the user's own accounts so they
+  -- stay linked; null for ordinary transactions.
+  transfer_id text,
   created_at timestamptz default now(),
   primary key (id, user_id)
 );
@@ -85,6 +101,7 @@ create table if not exists app_settings (
 );
 
 -- Row Level Security: each user can only see/modify their own rows
+alter table accounts enable row level security;
 alter table transactions enable row level security;
 alter table budgets enable row level security;
 alter table recurring enable row level security;
@@ -92,6 +109,9 @@ alter table custom_categories enable row level security;
 alter table savings_goals enable row level security;
 alter table wishlist enable row level security;
 alter table app_settings enable row level security;
+
+create policy "Users manage their own accounts" on accounts
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 create policy "Users manage their own transactions" on transactions
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

@@ -53,3 +53,12 @@ export function toDateStr(date) {
 export function generateId(prefix = "txn") {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
+
+// Transfers between the user's own accounts are stored as two linked
+// transactions (an expense leg + an income leg sharing transfer_id) so
+// per-account balances stay correct. They are NOT real income/expense
+// though, so every dashboard/report total must exclude them — otherwise a
+// transfer inflates both "Pemasukan" and "Pengeluaran" by the same amount.
+export function excludeTransfers(transactions) {
+  return transactions.filter((t) => !t.transfer_id);
+}

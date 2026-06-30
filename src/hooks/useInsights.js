@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useApp } from "../context/AppContext";
-import { shiftMonth } from "../lib/utils";
+import { shiftMonth, excludeTransfers } from "../lib/utils";
 
 const TREND_PERCENT_THRESHOLD = 15;
 const TREND_AMOUNT_THRESHOLD = 50000;
@@ -17,7 +17,7 @@ export function useInsights() {
   const { state } = useApp();
 
   return useMemo(() => {
-    const monthTransactions = state.transactions.filter((t) => t.date.startsWith(state.activeMonth));
+    const monthTransactions = excludeTransfers(state.transactions).filter((t) => t.date.startsWith(state.activeMonth));
 
     const biggestExpense = monthTransactions
       .filter((t) => t.type === "expense")
@@ -28,7 +28,7 @@ export function useInsights() {
       .reduce((max, t) => (!max || Number(t.amount) > Number(max.amount) ? t : max), null);
 
     const previousMonth = shiftMonth(state.activeMonth, -1);
-    const previousMonthTransactions = state.transactions.filter((t) => t.date.startsWith(previousMonth));
+    const previousMonthTransactions = excludeTransfers(state.transactions).filter((t) => t.date.startsWith(previousMonth));
 
     const currentByCategory = sumByCategory(monthTransactions.filter((t) => t.type === "expense"));
     const previousByCategory = sumByCategory(previousMonthTransactions.filter((t) => t.type === "expense"));

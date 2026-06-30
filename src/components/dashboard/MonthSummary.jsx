@@ -1,12 +1,13 @@
 import { useMemo } from "react";
 import { useApp } from "../../context/AppContext";
+import { excludeTransfers } from "../../lib/utils";
 import AmountText from "../ui/AmountText";
 
 export default function MonthSummary({ hideAmount }) {
   const { state } = useApp();
 
   const { totalIncome, totalExpense, net } = useMemo(() => {
-    const monthTx = state.transactions.filter((t) => t.date.startsWith(state.activeMonth));
+    const monthTx = excludeTransfers(state.transactions).filter((t) => t.date.startsWith(state.activeMonth));
     const totalIncome = monthTx.filter((t) => t.type === "income").reduce((s, t) => s + Number(t.amount), 0);
     const totalExpense = monthTx.filter((t) => t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);
     return { totalIncome, totalExpense, net: totalIncome - totalExpense };

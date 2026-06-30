@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import { excludeTransfers } from "./utils";
 
 const SHEET_NAMES = {
   TRANSAKSI: "Transaksi",
@@ -8,6 +9,7 @@ const SHEET_NAMES = {
   CATEGORIES: "Categories",
   SAVINGS_GOALS: "SavingsGoals",
   WISHLIST: "Wishlist",
+  ACCOUNTS: "Accounts",
 };
 
 export function parseExcelFile(file) {
@@ -23,6 +25,7 @@ export function parseExcelFile(file) {
           customCategories: normalizeCategories(sheetToJson(wb, SHEET_NAMES.CATEGORIES)),
           savingsGoals: normalizeSavingsGoals(sheetToJson(wb, SHEET_NAMES.SAVINGS_GOALS)),
           wishlist: normalizeWishlist(sheetToJson(wb, SHEET_NAMES.WISHLIST)),
+          accounts: normalizeAccounts(sheetToJson(wb, SHEET_NAMES.ACCOUNTS)),
         });
       } catch (err) {
         reject(err);
@@ -45,6 +48,9 @@ function normalizeTransactions(rows) {
     subcategory: r.subcategory || "",
     amount: Number(r.amount) || 0,
     is_recurring: r.is_recurring === true || r.is_recurring === "true",
+    // Old exports (pre-Phase 9) have no account column at all.
+    account: r.account || "acc_cash",
+    transfer_id: r.transfer_id || null,
   }));
 }
 
@@ -80,6 +86,16 @@ function normalizeWishlist(rows) {
     }));
 }
 
+function normalizeAccounts(rows) {
+  return rows
+    .filter((r) => r.id)
+    .map((r) => ({
+      id: r.id,
+      name: r.name,
+      isDefault: r.isDefault === true || r.isDefault === "true",
+    }));
+}
+
 function normalizeCategories(rows) {
   return rows
     .filter((r) => r.name)
@@ -101,6 +117,7 @@ export function exportToExcel(state, fileName = "pengeluaran.xlsx") {
   appendSheet(wb, SHEET_NAMES.CATEGORIES, serializeCategories(state.customCategories));
   appendSheet(wb, SHEET_NAMES.SAVINGS_GOALS, state.savingsGoals);
   appendSheet(wb, SHEET_NAMES.WISHLIST, state.wishlist);
+  appendSheet(wb, SHEET_NAMES.ACCOUNTS, state.accounts);
   appendSheet(wb, SHEET_NAMES.SUMMARY, buildSummary(state.transactions));
 
   XLSX.writeFile(wb, fileName);
@@ -137,7 +154,7 @@ function autoFitColumns(ws, data) {
 export function buildSummary(transactions) {
   const byMonth = {};
 
-  transactions.forEach((t) => {
+  excludeTransfers(transactions).forEach((t) => {
     const month = t.date?.slice(0, 7);
     if (!month) return;
     if (!byMonth[month]) {
@@ -189,6 +206,8 @@ export function generateTemplateWorkbook() {
       description: "Ayam geprek",
       is_recurring: false,
       recurring_id: "",
+      account: "acc_cash",
+      transfer_id: "",
     },
   ]);
   appendSheet(wb, SHEET_NAMES.BUDGET, [
@@ -213,6 +232,9 @@ export function generateTemplateWorkbook() {
   ]);
   appendSheet(wb, SHEET_NAMES.WISHLIST, [
     { id: "wish_001", name: "Headphone", price: 1200000, priority: "medium" },
+  ]);
+  appendSheet(wb, SHEET_NAMES.ACCOUNTS, [
+    { id: "acc_cash", name: "Cash", isDefault: true },
   ]);
   appendSheet(wb, SHEET_NAMES.SUMMARY, [
     { month: "", total_expense: "", total_income: "", net: "", by_category: "" },

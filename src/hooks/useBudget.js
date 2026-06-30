@@ -1,11 +1,12 @@
 import { useMemo } from "react";
 import { useApp } from "../context/AppContext";
+import { excludeTransfers } from "../lib/utils";
 
 export function useBudget() {
   const { state } = useApp();
 
   return useMemo(() => {
-    const monthTransactions = state.transactions.filter(
+    const monthTransactions = excludeTransfers(state.transactions).filter(
       (t) => t.type === "expense" && t.date.startsWith(state.activeMonth)
     );
     const monthBudgets = state.budgets.filter((b) => b.month === state.activeMonth);
