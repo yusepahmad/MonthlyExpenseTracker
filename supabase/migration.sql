@@ -73,6 +73,11 @@ create table if not exists custom_categories (
   -- Only meaningful for expense categories — drives the "Insight
   -- Pemborosan" (waste/overspend) feature. Null for income categories.
   is_essential boolean,
+  -- Only meaningful for expense categories — which 20/10/70 allocation
+  -- pocket this category's spending counts against: 'living' (default) or
+  -- 'investment' (e.g. Pendidikan/kuliah, treated as investing in
+  -- yourself). Null for income categories.
+  allocation_pocket text check (allocation_pocket in ('living', 'investment')),
   created_at timestamptz default now(),
   primary key (id),
   unique (user_id, name)

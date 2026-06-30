@@ -43,6 +43,7 @@ export default function AllocationPage() {
   const hasIncome = allocation.monthIncome > 0;
   const hasInvestmentValue = allocation.investmentReturn !== null;
   const isGain = hasInvestmentValue && allocation.investmentReturn.gain >= 0;
+  const isOverspent = allocation.realRemainingForLiving < 0;
 
   return (
     <div>
@@ -65,14 +66,24 @@ export default function AllocationPage() {
         </div>
       ) : (
         <div className="space-y-4 sm:space-y-6">
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500/90 via-purple-600/90 to-pink-500/90 backdrop-blur-2xl backdrop-saturate-150 text-white p-5 sm:p-6 shadow-glow border border-white/20 animate-fade-in">
+          <div
+            className={`relative overflow-hidden rounded-2xl backdrop-blur-2xl backdrop-saturate-150 text-white p-5 sm:p-6 shadow-glow border border-white/20 animate-fade-in ${
+              isOverspent
+                ? "bg-gradient-to-br from-red-500/90 via-rose-600/90 to-red-700/90"
+                : "bg-gradient-to-br from-indigo-500/90 via-purple-600/90 to-pink-500/90"
+            }`}
+          >
             <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10 blur-2xl" />
-            <p className="relative text-sm font-light text-white/80">Dana Bersih untuk Hidup</p>
+            <p className="relative text-sm font-light text-white/80">
+              {isOverspent ? "Sudah Minus Sebesar" : "Sisa yang Benar-Benar Bisa Dipakai"}
+            </p>
             <p className="relative font-display text-3xl sm:text-4xl font-medium mt-1">
-              {formatCurrency(allocation.netForLiving)}
+              {isOverspent && "-"}
+              {formatCurrency(Math.abs(allocation.realRemainingForLiving))}
             </p>
             <p className="relative text-xs font-light text-white/70 mt-2">
-              Total pemasukan bulan ini {formatCurrency(allocation.monthIncome)}, otomatis dipotong {allocation.settings.emergencyPercent}% Dana Darurat + {allocation.settings.investmentPercent}% Investasi.
+              Jatah Biaya Hidup {formatCurrency(allocation.netForLiving)}, sudah dipakai {formatCurrency(allocation.livingSpent)}.
+              {isOverspent && " Pengeluaran sudah melebihi jatah bulan ini — coba tahan dulu sampai akhir bulan."}
             </p>
           </div>
 
@@ -134,6 +145,12 @@ export default function AllocationPage() {
             />
             <CarryOverNote amount={allocation.investmentCarryOver} label="Investasi" />
 
+            {allocation.investmentSpent > 0 && (
+              <p className="text-xs font-light text-gray-500 dark:text-gray-400 mt-2">
+                Termasuk {formatCurrency(allocation.investmentSpent)} dari pengeluaran kategori "Investasi" (mis. Pendidikan/kuliah) — sudah dihitung sebagai bagian dari alokasi ini, bukan biaya hidup.
+              </p>
+            )}
+
             {hasInvestmentValue ? (
               <div className="mt-3 rounded-xl bg-white/30 dark:bg-gray-800/40 border border-white/50 dark:border-gray-700/50 px-3 py-2.5">
                 <div className="flex items-center justify-between text-xs mb-1">
@@ -171,14 +188,21 @@ export default function AllocationPage() {
           </div>
 
           <div className="rounded-2xl bg-white/40 dark:bg-gray-900/40 backdrop-blur-2xl backdrop-saturate-150 border border-white/60 dark:border-gray-800/60 p-5 shadow-soft animate-fade-in">
-            <div className="flex items-center gap-2 mb-1.5">
+            <div className="flex items-center gap-2 mb-4">
               <Wallet className="w-4 h-4 text-gray-400" />
               <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Biaya Hidup ({allocation.settings.livingPercent}%)
               </h3>
             </div>
-            <p className="text-xs font-light text-gray-400 mb-2">
-              Target alokasi: {formatCurrency(allocation.livingTarget)}. Dihitung otomatis dari sisa pemasukan setelah Dana Darurat & Investasi — tidak perlu ditandai manual.
+            <ProgressRow
+              label="Sudah dipakai"
+              allocated={allocation.livingSpent}
+              target={allocation.netForLiving}
+              percent={allocation.netForLiving > 0 ? Math.min(100, (allocation.livingSpent / allocation.netForLiving) * 100) : 0}
+              barClass={isOverspent ? "bg-gradient-to-r from-red-500 to-rose-400" : "bg-gradient-to-r from-gray-500 to-gray-400"}
+            />
+            <p className="text-xs font-light text-gray-400 mt-2">
+              Jatah {formatCurrency(allocation.netForLiving)} dihitung otomatis dari sisa pemasukan setelah Dana Darurat & Investasi — kategori dengan pos "Investasi" (mis. Pendidikan) tidak masuk hitungan ini.
             </p>
           </div>
         </div>

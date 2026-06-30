@@ -11,6 +11,13 @@ export async function fetchCustomCategories(userId) {
     subcategories: row.subcategories || [],
     ...(row.overrides_default ? { overridesDefault: row.overrides_default } : {}),
     ...(row.type === "expense" ? { isEssential: row.is_essential ?? true } : {}),
+    // Only set allocationPocket when this override row actually specifies
+    // one. Omitting the key entirely (rather than defaulting to "living")
+    // lets the merge in categories.js fall through to the underlying
+    // default category's allocationPocket for older override rows created
+    // before this column existed (e.g. an isEssential-only edit on
+    // "Pendidikan" shouldn't silently flip it from "investment" to "living").
+    ...(row.type === "expense" && row.allocation_pocket ? { allocationPocket: row.allocation_pocket } : {}),
   }));
 }
 
@@ -23,6 +30,7 @@ export async function insertCustomCategory(userId, category) {
     icon: category.icon,
     subcategories: category.subcategories || [],
     is_essential: category.type === "expense" ? category.isEssential ?? true : null,
+    allocation_pocket: category.type === "expense" ? category.allocationPocket || "living" : null,
   });
   if (error) throw error;
 }
@@ -48,6 +56,7 @@ export async function upsertCategoryOverride(userId, originalName, category) {
     subcategories: category.subcategories || [],
     overrides_default: category.overridesDefault || null,
     is_essential: category.type === "expense" ? category.isEssential ?? true : null,
+    allocation_pocket: category.type === "expense" ? category.allocationPocket || "living" : null,
   });
   if (insertError) throw insertError;
 }

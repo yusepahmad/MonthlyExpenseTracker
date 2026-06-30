@@ -9,6 +9,7 @@ export default function AllocationSummaryCard({ hideAmount }) {
   if (allocation.monthIncome <= 0) return null;
 
   const totalCarryOver = allocation.emergencyCarryOver + allocation.investmentCarryOver;
+  const isOverspent = allocation.realRemainingForLiving < 0;
 
   return (
     <div className="rounded-2xl bg-white/40 dark:bg-gray-900/40 backdrop-blur-2xl backdrop-saturate-150 border border-white/60 dark:border-gray-800/60 p-5 shadow-soft animate-fade-in">
@@ -17,9 +18,12 @@ export default function AllocationSummaryCard({ hideAmount }) {
         <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Alokasi Keuangan Bulan Ini</h3>
       </div>
 
-      <p className="text-xs font-light text-gray-400 mb-1">Dana Bersih untuk Hidup</p>
-      <p className="text-2xl font-medium text-gray-900 dark:text-white mb-4">
-        <AmountText amount={allocation.netForLiving} hide={hideAmount} />
+      <p className="text-xs font-light text-gray-400 mb-1">
+        {isOverspent ? "Sudah Minus Sebesar" : "Sisa yang Benar-Benar Bisa Dipakai"}
+      </p>
+      <p className={`text-2xl font-medium mb-4 ${isOverspent ? "text-red-500" : "text-gray-900 dark:text-white"}`}>
+        {isOverspent && !hideAmount && "-"}
+        <AmountText amount={Math.abs(allocation.realRemainingForLiving)} hide={hideAmount} />
       </p>
 
       <div className="grid grid-cols-2 gap-3">

@@ -147,6 +147,12 @@ function normalizeCategories(rows) {
       color: r.color || "#6B7280",
       icon: r.icon || "Tag",
       subcategories: r.subcategories ? String(r.subcategories).split(",").map((s) => s.trim()).filter(Boolean) : [],
+      ...((r.type || "expense") === "expense"
+        ? {
+            isEssential: r.isEssential === true || r.isEssential === "true" || r.isEssential === undefined,
+            allocationPocket: r.allocationPocket || "living",
+          }
+        : {}),
     }));
 }
 
@@ -175,6 +181,9 @@ function serializeCategories(customCategories) {
     color: c.color,
     icon: c.icon,
     subcategories: (c.subcategories || []).join(", "),
+    ...(c.type === "expense"
+      ? { isEssential: c.isEssential ?? true, allocationPocket: c.allocationPocket || "living" }
+      : {}),
   }));
 }
 

@@ -6,7 +6,12 @@ export function useFinancialAllocation() {
   const { state } = useApp();
 
   return useMemo(() => {
-    const allocation = calculateAllocation(state.transactions, state.activeMonth, state.allocationSettings);
+    const allocation = calculateAllocation(
+      state.transactions,
+      state.activeMonth,
+      state.allocationSettings,
+      state.customCategories
+    );
     const split = emergencyFundSplit(allocation.emergencyAllocated);
     const investmentReturn =
       state.allocationSettings.investmentValue !== null
@@ -18,5 +23,5 @@ export function useFinancialAllocation() {
           )
         : null;
     return { ...allocation, emergencyFundSplit: split, settings: state.allocationSettings, investmentReturn };
-  }, [state.transactions, state.activeMonth, state.allocationSettings]);
+  }, [state.transactions, state.activeMonth, state.allocationSettings, state.customCategories]);
 }

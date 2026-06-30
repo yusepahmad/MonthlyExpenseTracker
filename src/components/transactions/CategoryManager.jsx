@@ -37,6 +37,7 @@ function AddSubcategoryForm({ categories, onDone }) {
         icon: selected.icon,
         subcategories: [...selected.subcategories, trimmed],
         isEssential: selected.isEssential,
+        allocationPocket: selected.allocationPocket,
       },
     });
     setSubName("");
@@ -150,6 +151,11 @@ export default function CategoryManager() {
                   </p>
                 )}
               </div>
+              {category.type === "expense" && category.allocationPocket === "investment" && (
+                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 shrink-0">
+                  Investasi
+                </span>
+              )}
               {category.type === "expense" && category.isEssential === false && (
                 <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 shrink-0">
                   Non-Esensial

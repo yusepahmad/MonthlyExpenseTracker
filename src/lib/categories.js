@@ -2,15 +2,21 @@
 // Pemborosan" feature (waste/overspend insight). Default mapping below is
 // just a sensible starting point; the user can re-tag any category via
 // CategoryForm.
+//
+// allocationPocket marks which 20/10/70 pocket an expense category counts
+// against: "living" (default — most expenses) or "investment" (e.g.
+// Pendidikan/kuliah, treated as investing in yourself). Spending in an
+// "investment" category pays down this month's investment target instead
+// of eating into "Dana Bersih untuk Hidup" — see lib/allocation.js.
 export const DEFAULT_CATEGORIES = [
-  { name: "Makan", color: "#F59E0B", icon: "Utensils", type: "expense", subcategories: ["Restoran", "Warung", "Kafe", "Snack"], isEssential: true },
-  { name: "Transport", color: "#3B82F6", icon: "Car", type: "expense", subcategories: ["Bensin", "Parkir", "Ojek/Taksi", "Tol"], isEssential: true },
-  { name: "Belanja", color: "#8B5CF6", icon: "ShoppingBag", type: "expense", subcategories: ["Pakaian", "Elektronik", "Kebutuhan Rumah"], isEssential: false },
-  { name: "Hiburan", color: "#EC4899", icon: "Gamepad2", type: "expense", subcategories: ["Streaming", "Game", "Nonton", "Hobi"], isEssential: false },
-  { name: "Kesehatan", color: "#10B981", icon: "Pill", type: "expense", subcategories: ["Obat", "Dokter", "Vitamin"], isEssential: true },
-  { name: "Tagihan", color: "#EF4444", icon: "Receipt", type: "expense", subcategories: ["Listrik", "Air", "Internet", "Pulsa"], isEssential: true },
-  { name: "Pendidikan", color: "#06B6D4", icon: "BookOpen", type: "expense", subcategories: ["Kursus", "Buku", "SPP"], isEssential: true },
-  { name: "Lainnya", color: "#6B7280", icon: "Package", type: "expense", subcategories: [], isEssential: false },
+  { name: "Makan", color: "#F59E0B", icon: "Utensils", type: "expense", subcategories: ["Restoran", "Warung", "Kafe", "Snack"], isEssential: true, allocationPocket: "living" },
+  { name: "Transport", color: "#3B82F6", icon: "Car", type: "expense", subcategories: ["Bensin", "Parkir", "Ojek/Taksi", "Tol"], isEssential: true, allocationPocket: "living" },
+  { name: "Belanja", color: "#8B5CF6", icon: "ShoppingBag", type: "expense", subcategories: ["Pakaian", "Elektronik", "Kebutuhan Rumah"], isEssential: false, allocationPocket: "living" },
+  { name: "Hiburan", color: "#EC4899", icon: "Gamepad2", type: "expense", subcategories: ["Streaming", "Game", "Nonton", "Hobi"], isEssential: false, allocationPocket: "living" },
+  { name: "Kesehatan", color: "#10B981", icon: "Pill", type: "expense", subcategories: ["Obat", "Dokter", "Vitamin"], isEssential: true, allocationPocket: "living" },
+  { name: "Tagihan", color: "#EF4444", icon: "Receipt", type: "expense", subcategories: ["Listrik", "Air", "Internet", "Pulsa"], isEssential: true, allocationPocket: "living" },
+  { name: "Pendidikan", color: "#06B6D4", icon: "BookOpen", type: "expense", subcategories: ["Kursus", "Buku", "SPP"], isEssential: true, allocationPocket: "investment" },
+  { name: "Lainnya", color: "#6B7280", icon: "Package", type: "expense", subcategories: [], isEssential: false, allocationPocket: "living" },
   { name: "Gaji", color: "#22C55E", icon: "Briefcase", type: "income", subcategories: [] },
   { name: "Freelance", color: "#84CC16", icon: "Laptop", type: "income", subcategories: [] },
   { name: "Piket", color: "#0EA5E9", icon: "Clock", type: "income", subcategories: [] },
@@ -68,6 +74,7 @@ export function getAllCategories(customCategories = []) {
       ...c,
       isDefault: false,
       isEssential: c.isEssential ?? true, // default to essential so new categories aren't mislabeled as waste
+      allocationPocket: c.allocationPocket || "living",
     })),
   ];
 }

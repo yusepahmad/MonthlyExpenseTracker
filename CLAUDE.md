@@ -48,6 +48,16 @@ Di luar 13 fase asli — diminta user setelah Fase 12 selesai, supaya app aktif 
 
 Diverifikasi langsung: pemasukan otomatis ter-allocate 20/10/70 tanpa tagging apapun; set nilai investasi Rp500rb vs. total teralokasi Rp662rb → benar muncul "Rugi Rp -162.006,3 (-24,5%)".
 
+### v3: pengeluaran kategori "Investasi" (mis. kuliah) + sisa riil yang minus
+
+User merasa "Dana Bersih untuk Hidup" menyesatkan — itu cuma jatah/budget, bukan sisa uang riil (belum dikurangi pengeluaran yang sudah terjadi), dan ingin kuliah dihitung sebagai investasi (ke diri sendiri), bukan biaya hidup.
+
+**Pos alokasi per kategori expense**: `allocationPocket` (`"living"` default, atau `"investment"`) ditandai per kategori via `CategoryForm.jsx` (toggle "Masuk Pos Alokasi"), badge indigo "Investasi" di `CategoryManager.jsx`. Default "Pendidikan" = `"investment"`. Pengeluaran di kategori `"investment"` (mis. UKT/SPP) **menambah** kontribusi investasi bulan ini (di atas alokasi otomatis 10%) — bukan mengurangi jatah Biaya Hidup. Kolom `allocation_pocket` baru di `custom_categories` (`supabase/migration_010_allocation_pocket.sql`).
+
+**Sisa riil**: `realRemainingForLiving = netForLiving - livingSpent` (jatah Biaya Hidup dikurangi yang BENAR-BENAR sudah dipakai di kategori pos "living"). Ini angka utama yang ditampilkan sekarang (hero card Dashboard & halaman Alokasi), **bisa minus** dan ditandai jelas merah + label "Sudah Minus Sebesar" kalau pengeluaran sudah melebihi jatah bulan ini.
+
+**Bug yang ditemukan & diperbaiki saat verifikasi**: `fetchCustomCategories` di `categoriesApi.js` awalnya selalu set `allocationPocket: row.allocation_pocket || "living"` untuk SEMUA override row expense — termasuk override lama yang dibuat sebelum kolom `allocation_pocket` ada (mis. override "Pendidikan" yang aslinya cuma untuk `isEssential`). Ini diam-diam menimpa default `allocationPocket: "investment"` jadi `"living"`. Fix: hanya sertakan key `allocationPocket` di hasil fetch kalau `row.allocation_pocket` benar-benar terisi — kalau tidak, key dihilangkan sepenuhnya supaya merge `{...default, ...override}` di `categories.js` jatuh balik ke nilai default. Diverifikasi: sebelum fix, toggle "Pendidikan" salah default ke "Biaya Hidup"; setelah fix, benar default ke "Investasi", dan "Sisa Riil" naik dari Rp79rb ke Rp1,53jt setelah pengeluaran UKT Rp1,45jt benar dipindah dari hitungan Biaya Hidup ke Investasi.
+
 ## Fitur pasca-plan: Insight Pemborosan
 
 Lanjutan dari goal *financial freedom* user — "uang yang disia-siakan" didefinisikan jadi 3 hal konkret: (1) pengeluaran non-esensial yang membengkak vs rata-rata, (2) total kelebihan budget bulan ini, (3) subscription/recurring yang sudah lama jalan (≥3 bulan) — reminder "masih dipakai?".

@@ -1,9 +1,36 @@
 import { excludeTransfers } from "./utils";
+import { getAllCategories } from "./categories";
 
 function monthIncomeOf(transactions, month) {
   return excludeTransfers(transactions)
     .filter((t) => t.type === "income" && t.date.startsWith(month))
     .reduce((sum, t) => sum + Number(t.amount), 0);
+}
+
+// Sums this month's expenses split by which 20/10/70 pocket each category
+// belongs to. "investment" categories (e.g. Pendidikan/kuliah, tagged via
+// CategoryForm) count as money already going toward the Investasi target
+// instead of eating into "Dana Bersih untuk Hidup" — the user is investing
+// in themselves, not spending it away.
+function monthExpenseByPocket(transactions, month, customCategories) {
+  const categories = getAllCategories(customCategories);
+  const pocketByName = new Map(categories.map((c) => [c.name.toLowerCase(), c.allocationPocket || "living"]));
+
+  let living = 0;
+  let investment = 0;
+
+  excludeTransfers(transactions)
+    .filter((t) => t.type === "expense" && t.date.startsWith(month))
+    .forEach((t) => {
+      const pocket = pocketByName.get(t.category.toLowerCase()) || "living";
+      if (pocket === "investment") {
+        investment += Number(t.amount);
+      } else {
+        living += Number(t.amount);
+      }
+    });
+
+  return { living, investment };
 }
 
 function allMonthsWithIncome(transactions, beforeMonth) {
@@ -25,27 +52,38 @@ function allMonthsWithIncome(transactions, beforeMonth) {
 // target, the shortfall is added on top of the current month's target —
 // exactly like Debt Tracking's remainingAmount, except recomputed live
 // from transaction history instead of stored separately.
-export function calculateAllocation(transactions, activeMonth, settings) {
+export function calculateAllocation(transactions, activeMonth, settings, customCategories = []) {
   const monthIncome = monthIncomeOf(transactions, activeMonth);
 
   const emergencyAllocated = monthIncome * (settings.emergencyPercent / 100);
-  const investmentAllocated = monthIncome * (settings.investmentPercent / 100);
+  const investmentAutoAllocated = monthIncome * (settings.investmentPercent / 100);
   const livingTarget = monthIncome * (settings.livingPercent / 100);
+
+  // Spending in "investment" pocket categories (e.g. Pendidikan/kuliah)
+  // counts toward this month's investment contribution alongside the
+  // automatic 10% — investing in yourself still pays down the target.
+  const { living: livingSpent, investment: investmentSpent } = monthExpenseByPocket(
+    transactions,
+    activeMonth,
+    customCategories
+  );
+  const investmentAllocated = investmentAutoAllocated + investmentSpent;
 
   let emergencyCarryOver = 0;
   let investmentCarryOver = 0;
 
   for (const month of allMonthsWithIncome(transactions, activeMonth)) {
     const income = monthIncomeOf(transactions, month);
+    const { investment: monthInvestmentSpent } = monthExpenseByPocket(transactions, month, customCategories);
     const monthEmergencyTarget = income * (settings.emergencyPercent / 100) + emergencyCarryOver;
     const monthInvestmentTarget = income * (settings.investmentPercent / 100) + investmentCarryOver;
     const monthEmergencyActual = income * (settings.emergencyPercent / 100);
-    const monthInvestmentActual = income * (settings.investmentPercent / 100);
+    const monthInvestmentActual = income * (settings.investmentPercent / 100) + monthInvestmentSpent;
 
-    // Each month allocates exactly its own percentage automatically, so a
-    // shortfall only happens when this month's target (incl. carry-over)
-    // exceeds what this month alone could allocate — i.e. old debt that
-    // hasn't been paid down by a high-income month yet.
+    // Each month allocates exactly its own percentage automatically (plus
+    // any investment-pocket spending), so a shortfall only happens when
+    // this month's target (incl. carry-over) exceeds what this month alone
+    // could allocate — i.e. old debt that hasn't been paid down yet.
     emergencyCarryOver = Math.max(0, monthEmergencyTarget - monthEmergencyActual);
     investmentCarryOver = Math.max(0, monthInvestmentTarget - monthInvestmentActual);
   }
@@ -53,11 +91,18 @@ export function calculateAllocation(transactions, activeMonth, settings) {
   const emergencyTarget = monthIncome * (settings.emergencyPercent / 100) + emergencyCarryOver;
   const investmentTarget = monthIncome * (settings.investmentPercent / 100) + investmentCarryOver;
 
-  // Money left for daily living = total income minus this month's
+  // Budgeted money for daily living = total income minus this month's
   // auto-allocated emergency/investment pockets (carry-over debt doesn't
-  // reduce living money further — it's a target/reminder, not money
-  // actually withheld from this month).
-  const netForLiving = monthIncome - emergencyAllocated - investmentAllocated;
+  // reduce this further — it's a target/reminder, not money actually
+  // withheld from this month).
+  const netForLiving = monthIncome - emergencyAllocated - investmentAutoAllocated;
+
+  // The number the user actually wants to see day to day: budgeted living
+  // money minus what's ALREADY been spent on living-pocket categories this
+  // month. Goes negative the moment living spending outpaces the budget —
+  // surfaced as a clear "minus" in the UI rather than hidden inside a
+  // still-positive-looking allocation target.
+  const realRemainingForLiving = netForLiving - livingSpent;
 
   return {
     monthIncome,
@@ -66,9 +111,13 @@ export function calculateAllocation(transactions, activeMonth, settings) {
     livingTarget,
     emergencyAllocated,
     investmentAllocated,
+    investmentAutoAllocated,
+    investmentSpent,
+    livingSpent,
     emergencyCarryOver,
     investmentCarryOver,
     netForLiving,
+    realRemainingForLiving,
     emergencyProgress: emergencyTarget > 0 ? Math.min(100, (emergencyAllocated / emergencyTarget) * 100) : 0,
     investmentProgress: investmentTarget > 0 ? Math.min(100, (investmentAllocated / investmentTarget) * 100) : 0,
   };
