@@ -7,13 +7,13 @@ import { fetchWishlist, insertWishlistItem } from "./wishlistApi";
 import { fetchAccounts, insertAccount } from "./accountsApi";
 import { fetchChallenges, insertChallenge } from "./challengesApi";
 import { fetchDebts, insertDebt } from "./debtsApi";
-import { fetchActiveMonth, saveActiveMonth } from "./settingsApi";
+import { fetchActiveMonth, saveActiveMonth, fetchAllocationSettings, saveAllocationSettings } from "./settingsApi";
 import { loadState as loadLocalState } from "../storage";
 
 const MIGRATION_FLAG_KEY = "expense-tracker-migrated-to-cloud";
 
 export async function loadAllData(userId) {
-  const [transactions, budgets, recurring, customCategories, savingsGoals, wishlist, accounts, challenges, debts, activeMonth] = await Promise.all([
+  const [transactions, budgets, recurring, customCategories, savingsGoals, wishlist, accounts, challenges, debts, activeMonth, allocationSettings] = await Promise.all([
     fetchTransactions(userId),
     fetchBudgets(userId),
     fetchRecurring(userId),
@@ -24,9 +24,10 @@ export async function loadAllData(userId) {
     fetchChallenges(userId),
     fetchDebts(userId),
     fetchActiveMonth(userId),
+    fetchAllocationSettings(userId),
   ]);
 
-  return { transactions, budgets, recurring, customCategories, savingsGoals, wishlist, accounts, challenges, debts, activeMonth };
+  return { transactions, budgets, recurring, customCategories, savingsGoals, wishlist, accounts, challenges, debts, activeMonth, allocationSettings };
 }
 
 // One-time migration: if this browser has localStorage data from before
@@ -53,6 +54,7 @@ export async function migrateLocalDataIfNeeded(userId) {
     ...(local.challenges || []).map((c) => insertChallenge(userId, c)),
     ...(local.debts || []).map((d) => insertDebt(userId, d)),
     local.activeMonth ? saveActiveMonth(userId, local.activeMonth) : Promise.resolve(),
+    local.allocationSettings ? saveAllocationSettings(userId, local.allocationSettings) : Promise.resolve(),
   ]);
 
   localStorage.setItem(MIGRATION_FLAG_KEY, userId);

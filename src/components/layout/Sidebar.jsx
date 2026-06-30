@@ -1,4 +1,4 @@
-import { LayoutDashboard, ArrowLeftRight, Target, Repeat, ChevronLeft, Wallet, BarChart3, PiggyBank, Gift, Trophy, CreditCard } from "lucide-react";
+import { LayoutDashboard, ArrowLeftRight, Target, Repeat, ChevronLeft, Wallet, BarChart3, PiggyBank, Gift, Trophy, CreditCard, PieChart } from "lucide-react";
 
 const NAV_ITEMS = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { key: "accounts", label: "Akun", icon: Wallet },
   { key: "challenges", label: "Challenges", icon: Trophy },
   { key: "debts", label: "Hutang", icon: CreditCard },
+  { key: "allocation", label: "Alokasi", icon: PieChart },
 ];
 
 export default function Sidebar({ activePage, onNavigate, collapsed, onToggleCollapse }) {

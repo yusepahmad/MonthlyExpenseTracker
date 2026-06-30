@@ -11,11 +11,20 @@ import { insertWishlistItem, updateWishlistItem as updateWishlistItemRow, delete
 import { insertAccount, updateAccount as updateAccountRow, deleteAccount as deleteAccountRow } from "../lib/api/accountsApi";
 import { insertChallenge, updateChallenge as updateChallengeRow, deleteChallenge as deleteChallengeRow } from "../lib/api/challengesApi";
 import { insertDebt, updateDebt as updateDebtRow, deleteDebt as deleteDebtRow } from "../lib/api/debtsApi";
-import { saveActiveMonth } from "../lib/api/settingsApi";
+import { saveActiveMonth, saveAllocationSettings } from "../lib/api/settingsApi";
 import { replaceAllFromExcelImport } from "../lib/api/bulkApi";
 
 export const DEFAULT_ACCOUNT_ID = "acc_cash";
 const DEFAULT_ACCOUNT = { id: DEFAULT_ACCOUNT_ID, name: "Cash", isDefault: true };
+
+// 20/10/70 rule from the user's reference: 20% emergency fund, 10%
+// investment, 70% living costs — applied to total income for the month
+// (every income transaction, not just a "gaji pokok" category).
+export const DEFAULT_ALLOCATION_SETTINGS = {
+  emergencyPercent: 20,
+  investmentPercent: 10,
+  livingPercent: 70,
+};
 
 const baseState = {
   transactions: [],
@@ -27,6 +36,7 @@ const baseState = {
   accounts: [DEFAULT_ACCOUNT],
   challenges: [],
   debts: [],
+  allocationSettings: DEFAULT_ALLOCATION_SETTINGS,
   activeMonth: getCurrentMonth(),
   fileName: null,
 };
@@ -57,6 +67,7 @@ function reducer(state, action) {
         accounts: withDefaultAccountSeed(action.payload.accounts || state.accounts),
         challenges: action.payload.challenges || state.challenges,
         debts: action.payload.debts || state.debts,
+        allocationSettings: action.payload.allocationSettings || state.allocationSettings,
         fileName: action.payload.fileName,
       };
     case "LOAD_FROM_CLOUD":
@@ -71,6 +82,7 @@ function reducer(state, action) {
         wishlist: action.payload.wishlist || [],
         challenges: action.payload.challenges || [],
         debts: action.payload.debts || [],
+        allocationSettings: action.payload.allocationSettings || state.allocationSettings,
         activeMonth: action.payload.activeMonth || state.activeMonth,
       };
     case "ADD_TRANSACTION":
@@ -174,6 +186,8 @@ function reducer(state, action) {
       };
     case "DELETE_DEBT":
       return { ...state, debts: state.debts.filter((d) => d.id !== action.payload) };
+    case "SET_ALLOCATION_SETTINGS":
+      return { ...state, allocationSettings: action.payload };
     case "ADD_CATEGORY": {
       const { name, type, subcategories, icon } = action.payload;
       if (isCategoryNameTaken(name, state.customCategories)) return state;
@@ -291,6 +305,8 @@ function syncToCloud(userId, action) {
         return updateDebtRow(userId, action.payload);
       case "DELETE_DEBT":
         return deleteDebtRow(userId, action.payload);
+      case "SET_ALLOCATION_SETTINGS":
+        return saveAllocationSettings(userId, action.payload);
       case "ADD_CATEGORY":
         return insertCustomCategory(userId, action.payload);
       case "UPDATE_CATEGORY":

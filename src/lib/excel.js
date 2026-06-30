@@ -12,6 +12,7 @@ const SHEET_NAMES = {
   ACCOUNTS: "Accounts",
   CHALLENGES: "Challenges",
   DEBTS: "Debts",
+  ALLOCATION_SETTINGS: "AllocationSettings",
 };
 
 export function parseExcelFile(file) {
@@ -30,6 +31,7 @@ export function parseExcelFile(file) {
           accounts: normalizeAccounts(sheetToJson(wb, SHEET_NAMES.ACCOUNTS)),
           challenges: normalizeChallenges(sheetToJson(wb, SHEET_NAMES.CHALLENGES)),
           debts: normalizeDebts(sheetToJson(wb, SHEET_NAMES.DEBTS)),
+          allocationSettings: normalizeAllocationSettings(sheetToJson(wb, SHEET_NAMES.ALLOCATION_SETTINGS)),
         });
       } catch (err) {
         reject(err);
@@ -55,6 +57,7 @@ function normalizeTransactions(rows) {
     // Old exports (pre-Phase 9) have no account column at all.
     account: r.account || "acc_cash",
     transfer_id: r.transfer_id || null,
+    allocationTag: r.allocationTag || null,
   }));
 }
 
@@ -125,6 +128,16 @@ function normalizeDebts(rows) {
     }));
 }
 
+function normalizeAllocationSettings(rows) {
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    emergencyPercent: Number(row.emergencyPercent) || 20,
+    investmentPercent: Number(row.investmentPercent) || 10,
+    livingPercent: Number(row.livingPercent) || 70,
+  };
+}
+
 function normalizeCategories(rows) {
   return rows
     .filter((r) => r.name)
@@ -149,6 +162,7 @@ export function exportToExcel(state, fileName = "pengeluaran.xlsx") {
   appendSheet(wb, SHEET_NAMES.ACCOUNTS, state.accounts);
   appendSheet(wb, SHEET_NAMES.CHALLENGES, state.challenges);
   appendSheet(wb, SHEET_NAMES.DEBTS, state.debts);
+  appendSheet(wb, SHEET_NAMES.ALLOCATION_SETTINGS, [state.allocationSettings]);
   appendSheet(wb, SHEET_NAMES.SUMMARY, buildSummary(state.transactions));
 
   XLSX.writeFile(wb, fileName);
@@ -279,6 +293,9 @@ export function generateTemplateWorkbook() {
   ]);
   appendSheet(wb, SHEET_NAMES.DEBTS, [
     { id: "debt_001", name: "Cicilan Motor", totalAmount: 20000000, remainingAmount: 12000000, dueDate: "2026-12-31" },
+  ]);
+  appendSheet(wb, SHEET_NAMES.ALLOCATION_SETTINGS, [
+    { emergencyPercent: 20, investmentPercent: 10, livingPercent: 70 },
   ]);
   appendSheet(wb, SHEET_NAMES.SUMMARY, [
     { month: "", total_expense: "", total_income: "", net: "", by_category: "" },

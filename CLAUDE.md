@@ -27,6 +27,24 @@ Sejak Fase 6 juga sudah migrasi ke Supabase (cross-device cloud sync, lihat `src
 
 Semua fase di atas sudah diverifikasi end-to-end via browser (Playwright) dan `npm run build` sukses tanpa error.
 
-## Status: plan 13-fase selesai
+## Fitur pasca-plan: Alokasi Keuangan (20/10/70)
+
+Di luar 13 fase asli — diminta user setelah Fase 12 selesai, supaya app aktif mengarahkan alokasi pemasukan ke dana darurat/investasi, bukan cuma mencatat pasif.
+
+**Konsep**: rumus 20% Dana Darurat / 10% Investasi / 70% Biaya Hidup (referensi dari user), dihitung dari **total pemasukan bulan berjalan** — semua transaksi `type: income`, bukan cuma gaji pokok (freelance dll ikut terhitung). Persentase bisa diubah user (`allocationSettings` di state, default 20/10/70).
+
+**Cara kerja**: bukan kategori transaksi baru — setiap transaksi income punya field opsional `allocationTag` (`"emergency" | "investment" | null`), ditandai langsung di `TransactionForm.jsx` saat user pilih tipe Pemasukan (segmented control "Alokasikan ke"). Pemasukan yang tidak ditandai otomatis masuk hitungan "Dana Bersih untuk Hidup" (`netForLiving = monthIncome - emergencyAllocated - investmentAllocated`).
+
+**File kunci**:
+- `lib/allocation.js` — `calculateAllocation()` (pure function, hitung target & realisasi per pocket) + `emergencyFundSplit()` (breakdown internal 70% tabungan / 30% money market fund, murni informational dari strategi referensi user, tidak disimpan sebagai state terpisah).
+- `hooks/useFinancialAllocation.js` — wrapper hook.
+- `pages/AllocationPage.jsx` — halaman penuh: Dana Bersih untuk Hidup, progress Dana Darurat (+ breakdown tabungan/MMF), progress Investasi, target Biaya Hidup.
+- `components/allocation/AllocationSettingsForm.jsx` — edit persentase custom (live preview sisa % biaya hidup).
+- `components/dashboard/AllocationSummaryCard.jsx` — widget ringkas di Dashboard (hanya render kalau ada pemasukan bulan ini).
+- State baru: `allocationSettings` (single object, bukan array — pola sama seperti `activeMonth`) + kolom `allocation_tag` di tabel `transactions` + 3 kolom baru (`emergency_percent`, `investment_percent`, `living_percent`) di `app_settings` (`supabase/migration_007_allocation.sql`). Sheet Excel baru `AllocationSettings`.
+
+Diverifikasi langsung: income Rp1jt ditandai "Dana Darurat" → progress bar & breakdown 70/30 muncul benar, "Dana Bersih untuk Hidup" otomatis berkurang sebesar itu; ubah persentase ke 30/15/55 lalu kembali ke 20/10/70 — keduanya tersimpan & ter-apply dengan benar.
+
+## Status: plan 13-fase selesai + 1 fitur tambahan
 
 Tidak ada fase tersisa dari plan asli. Untuk kelanjutan, baca file plan di atas untuk konteks desain sebelumnya, atau tanya user fitur/perbaikan baru apa yang diinginkan.

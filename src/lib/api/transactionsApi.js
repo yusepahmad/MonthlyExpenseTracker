@@ -47,6 +47,9 @@ function toRow(userId, t) {
     recurring_id: t.recurring_id || null,
     account: t.account || "acc_cash",
     transfer_id: t.transfer_id || null,
+    // Only meaningful on income transactions: "emergency" | "investment" | null.
+    // Marks that this income has been allocated to a 20/10/70 pocket.
+    allocation_tag: t.allocationTag || null,
   };
 }
 
@@ -63,5 +66,6 @@ function fromRow(row) {
     recurring_id: row.recurring_id,
     account: row.account || "acc_cash",
     transfer_id: row.transfer_id || null,
+    allocationTag: row.allocation_tag || null,
   };
 }

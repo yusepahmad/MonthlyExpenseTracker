@@ -2,12 +2,13 @@ import { supabase } from "../supabase";
 import { replaceBudgets } from "./budgetsApi";
 import { replaceRecurring } from "./recurringApi";
 import { replaceCustomCategories } from "./categoriesApi";
+import { saveAllocationSettings } from "./settingsApi";
 
 // Excel import replaces the entire dataset — mirror that as a full
 // delete-then-insert per table, same pattern as the bulk-replace helpers
 // already used for budgets/recurring/categories.
 export async function replaceAllFromExcelImport(userId, payload) {
-  const { transactions, budgets, recurring, customCategories, savingsGoals, wishlist, accounts, challenges, debts } = payload;
+  const { transactions, budgets, recurring, customCategories, savingsGoals, wishlist, accounts, challenges, debts, allocationSettings } = payload;
 
   const { error: deleteError } = await supabase.from("transactions").delete().eq("user_id", userId);
   if (deleteError) throw deleteError;
@@ -26,6 +27,7 @@ export async function replaceAllFromExcelImport(userId, payload) {
       recurring_id: t.recurring_id || null,
       account: t.account || "acc_cash",
       transfer_id: t.transfer_id || null,
+      allocation_tag: t.allocationTag || null,
     }));
     const { error: insertError } = await supabase.from("transactions").insert(rows);
     if (insertError) throw insertError;
@@ -113,5 +115,6 @@ export async function replaceAllFromExcelImport(userId, payload) {
     replaceBudgets(userId, budgets),
     replaceRecurring(userId, recurring),
     replaceCustomCategories(userId, customCategories || []),
+    allocationSettings ? saveAllocationSettings(userId, allocationSettings) : Promise.resolve(),
   ]);
 }

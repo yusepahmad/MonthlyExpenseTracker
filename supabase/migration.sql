@@ -28,6 +28,9 @@ create table if not exists transactions (
   -- Set on both legs of a transfer between the user's own accounts so they
   -- stay linked; null for ordinary transactions.
   transfer_id text,
+  -- Only meaningful on income transactions: marks this income as already
+  -- allocated to the 20/10/70 emergency-fund / investment pocket.
+  allocation_tag text check (allocation_tag in ('emergency', 'investment')),
   created_at timestamptz default now(),
   primary key (id, user_id)
 );
@@ -119,6 +122,12 @@ create table if not exists debts (
 create table if not exists app_settings (
   user_id uuid not null references auth.users(id) on delete cascade,
   active_month text,
+  -- 20/10/70 allocation rule (emergency fund / investment / living costs),
+  -- applied to each month's total income. Null until the user customizes it,
+  -- the app falls back to the 20/10/70 default in that case.
+  emergency_percent numeric,
+  investment_percent numeric,
+  living_percent numeric,
   updated_at timestamptz default now(),
   primary key (user_id)
 );
