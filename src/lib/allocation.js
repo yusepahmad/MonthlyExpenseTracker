@@ -12,12 +12,18 @@ function monthIncomeOf(transactions, month) {
 // CategoryForm) count as money already going toward the Investasi target
 // instead of eating into "Dana Bersih untuk Hidup" — the user is investing
 // in themselves, not spending it away.
+//
+// byCategory keeps the investment total broken down per category (e.g.
+// "Pendidikan: Rp 1.450.000") so the auto 10% allocation and actual
+// category spending (kuliah, etc.) don't get blurred into one opaque
+// number — the user explicitly asked to see them apart.
 function monthExpenseByPocket(transactions, month, customCategories) {
   const categories = getAllCategories(customCategories);
   const pocketByName = new Map(categories.map((c) => [c.name.toLowerCase(), c.allocationPocket || "living"]));
 
   let living = 0;
   let investment = 0;
+  const byCategory = {};
 
   excludeTransfers(transactions)
     .filter((t) => t.type === "expense" && t.date.startsWith(month))
@@ -25,12 +31,13 @@ function monthExpenseByPocket(transactions, month, customCategories) {
       const pocket = pocketByName.get(t.category.toLowerCase()) || "living";
       if (pocket === "investment") {
         investment += Number(t.amount);
+        byCategory[t.category] = (byCategory[t.category] || 0) + Number(t.amount);
       } else {
         living += Number(t.amount);
       }
     });
 
-  return { living, investment };
+  return { living, investment, byCategory };
 }
 
 function allMonthsWithIncome(transactions, beforeMonth) {
@@ -62,11 +69,11 @@ export function calculateAllocation(transactions, activeMonth, settings, customC
   // Spending in "investment" pocket categories (e.g. Pendidikan/kuliah)
   // counts toward this month's investment contribution alongside the
   // automatic 10% — investing in yourself still pays down the target.
-  const { living: livingSpent, investment: investmentSpent } = monthExpenseByPocket(
-    transactions,
-    activeMonth,
-    customCategories
-  );
+  const {
+    living: livingSpent,
+    investment: investmentSpent,
+    byCategory: investmentByCategory,
+  } = monthExpenseByPocket(transactions, activeMonth, customCategories);
   const investmentAllocated = investmentAutoAllocated + investmentSpent;
 
   let emergencyCarryOver = 0;
@@ -113,6 +120,7 @@ export function calculateAllocation(transactions, activeMonth, settings, customC
     investmentAllocated,
     investmentAutoAllocated,
     investmentSpent,
+    investmentByCategory,
     livingSpent,
     emergencyCarryOver,
     investmentCarryOver,

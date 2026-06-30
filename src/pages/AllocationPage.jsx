@@ -145,11 +145,26 @@ export default function AllocationPage() {
             />
             <CarryOverNote amount={allocation.investmentCarryOver} label="Investasi" />
 
-            {allocation.investmentSpent > 0 && (
-              <p className="text-xs font-light text-gray-500 dark:text-gray-400 mt-2">
-                Termasuk {formatCurrency(allocation.investmentSpent)} dari pengeluaran kategori "Investasi" (mis. Pendidikan/kuliah) — sudah dihitung sebagai bagian dari alokasi ini, bukan biaya hidup.
-              </p>
-            )}
+            <div className="mt-3 rounded-xl bg-white/30 dark:bg-gray-800/40 border border-white/50 dark:border-gray-700/50 px-3 py-2.5">
+              <p className="text-xs font-light text-gray-400 mb-2">Rincian sumber alokasi</p>
+              <div className="flex items-center justify-between text-xs mb-1.5">
+                <span className="font-light text-gray-500 dark:text-gray-400">Alokasi Otomatis (10% pemasukan)</span>
+                <span className="font-medium text-gray-700 dark:text-gray-200">
+                  {formatCurrency(allocation.investmentAutoAllocated)}
+                </span>
+              </div>
+              {Object.entries(allocation.investmentByCategory || {}).map(([category, amount]) => (
+                <div key={category} className="flex items-center justify-between text-xs mb-1.5">
+                  <span className="font-light text-gray-500 dark:text-gray-400">{category}</span>
+                  <span className="font-medium text-gray-700 dark:text-gray-200">{formatCurrency(amount)}</span>
+                </div>
+              ))}
+              {allocation.investmentSpent === 0 && (
+                <p className="text-xs font-light text-gray-400 italic">
+                  Belum ada pengeluaran kategori "Investasi" (mis. Pendidikan/kuliah) bulan ini.
+                </p>
+              )}
+            </div>
 
             {hasInvestmentValue ? (
               <div className="mt-3 rounded-xl bg-white/30 dark:bg-gray-800/40 border border-white/50 dark:border-gray-700/50 px-3 py-2.5">
