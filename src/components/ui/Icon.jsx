@@ -39,6 +39,7 @@ import {
   CreditCard,
   Banknote,
   Repeat,
+  Trophy,
 } from "lucide-react";
 
 const ICONS = {
@@ -82,6 +83,7 @@ const ICONS = {
   CreditCard,
   Banknote,
   Repeat,
+  Trophy,
 };
 
 export const PICKABLE_ICONS = [

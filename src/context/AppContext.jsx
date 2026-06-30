@@ -9,6 +9,7 @@ import { insertCustomCategory, upsertCategoryOverride, deleteCustomCategory } fr
 import { insertSavingsGoal, updateSavingsGoal as updateSavingsGoalRow, deleteSavingsGoal as deleteSavingsGoalRow } from "../lib/api/savingsGoalsApi";
 import { insertWishlistItem, updateWishlistItem as updateWishlistItemRow, deleteWishlistItem as deleteWishlistItemRow } from "../lib/api/wishlistApi";
 import { insertAccount, updateAccount as updateAccountRow, deleteAccount as deleteAccountRow } from "../lib/api/accountsApi";
+import { insertChallenge, updateChallenge as updateChallengeRow, deleteChallenge as deleteChallengeRow } from "../lib/api/challengesApi";
 import { saveActiveMonth } from "../lib/api/settingsApi";
 import { replaceAllFromExcelImport } from "../lib/api/bulkApi";
 
@@ -23,6 +24,7 @@ const baseState = {
   savingsGoals: [],
   wishlist: [],
   accounts: [DEFAULT_ACCOUNT],
+  challenges: [],
   activeMonth: getCurrentMonth(),
   fileName: null,
 };
@@ -51,6 +53,7 @@ function reducer(state, action) {
         savingsGoals: action.payload.savingsGoals || state.savingsGoals,
         wishlist: action.payload.wishlist || state.wishlist,
         accounts: withDefaultAccountSeed(action.payload.accounts || state.accounts),
+        challenges: action.payload.challenges || state.challenges,
         fileName: action.payload.fileName,
       };
     case "LOAD_FROM_CLOUD":
@@ -63,6 +66,7 @@ function reducer(state, action) {
         savingsGoals: action.payload.savingsGoals,
         accounts: withDefaultAccountSeed(action.payload.accounts),
         wishlist: action.payload.wishlist || [],
+        challenges: action.payload.challenges || [],
         activeMonth: action.payload.activeMonth || state.activeMonth,
       };
     case "ADD_TRANSACTION":
@@ -148,6 +152,15 @@ function reducer(state, action) {
       };
     case "DELETE_WISHLIST_ITEM":
       return { ...state, wishlist: state.wishlist.filter((w) => w.id !== action.payload) };
+    case "ADD_CHALLENGE":
+      return { ...state, challenges: [...state.challenges, action.payload] };
+    case "UPDATE_CHALLENGE":
+      return {
+        ...state,
+        challenges: state.challenges.map((c) => (c.id === action.payload.id ? { ...c, ...action.payload } : c)),
+      };
+    case "DELETE_CHALLENGE":
+      return { ...state, challenges: state.challenges.filter((c) => c.id !== action.payload) };
     case "ADD_CATEGORY": {
       const { name, type, subcategories, icon } = action.payload;
       if (isCategoryNameTaken(name, state.customCategories)) return state;
@@ -253,6 +266,12 @@ function syncToCloud(userId, action) {
         return updateAccountRow(userId, action.payload);
       case "DELETE_ACCOUNT":
         return deleteAccountRow(userId, action.payload);
+      case "ADD_CHALLENGE":
+        return insertChallenge(userId, action.payload);
+      case "UPDATE_CHALLENGE":
+        return updateChallengeRow(userId, action.payload);
+      case "DELETE_CHALLENGE":
+        return deleteChallengeRow(userId, action.payload);
       case "ADD_CATEGORY":
         return insertCustomCategory(userId, action.payload);
       case "UPDATE_CATEGORY":

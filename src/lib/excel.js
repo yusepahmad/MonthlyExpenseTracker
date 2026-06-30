@@ -10,6 +10,7 @@ const SHEET_NAMES = {
   SAVINGS_GOALS: "SavingsGoals",
   WISHLIST: "Wishlist",
   ACCOUNTS: "Accounts",
+  CHALLENGES: "Challenges",
 };
 
 export function parseExcelFile(file) {
@@ -26,6 +27,7 @@ export function parseExcelFile(file) {
           savingsGoals: normalizeSavingsGoals(sheetToJson(wb, SHEET_NAMES.SAVINGS_GOALS)),
           wishlist: normalizeWishlist(sheetToJson(wb, SHEET_NAMES.WISHLIST)),
           accounts: normalizeAccounts(sheetToJson(wb, SHEET_NAMES.ACCOUNTS)),
+          challenges: normalizeChallenges(sheetToJson(wb, SHEET_NAMES.CHALLENGES)),
         });
       } catch (err) {
         reject(err);
@@ -96,6 +98,19 @@ function normalizeAccounts(rows) {
     }));
 }
 
+function normalizeChallenges(rows) {
+  return rows
+    .filter((r) => r.id)
+    .map((r) => ({
+      id: r.id,
+      type: r.type,
+      category: r.category,
+      targetAmount: r.targetAmount !== undefined && r.targetAmount !== "" ? Number(r.targetAmount) : null,
+      startDate: r.startDate,
+      endDate: r.endDate,
+    }));
+}
+
 function normalizeCategories(rows) {
   return rows
     .filter((r) => r.name)
@@ -118,6 +133,7 @@ export function exportToExcel(state, fileName = "pengeluaran.xlsx") {
   appendSheet(wb, SHEET_NAMES.SAVINGS_GOALS, state.savingsGoals);
   appendSheet(wb, SHEET_NAMES.WISHLIST, state.wishlist);
   appendSheet(wb, SHEET_NAMES.ACCOUNTS, state.accounts);
+  appendSheet(wb, SHEET_NAMES.CHALLENGES, state.challenges);
   appendSheet(wb, SHEET_NAMES.SUMMARY, buildSummary(state.transactions));
 
   XLSX.writeFile(wb, fileName);
@@ -235,6 +251,16 @@ export function generateTemplateWorkbook() {
   ]);
   appendSheet(wb, SHEET_NAMES.ACCOUNTS, [
     { id: "acc_cash", name: "Cash", isDefault: true },
+  ]);
+  appendSheet(wb, SHEET_NAMES.CHALLENGES, [
+    {
+      id: "chal_001",
+      type: "no_spend",
+      category: "Hiburan",
+      targetAmount: "",
+      startDate: "2025-06-01",
+      endDate: "2025-06-07",
+    },
   ]);
   appendSheet(wb, SHEET_NAMES.SUMMARY, [
     { month: "", total_expense: "", total_income: "", net: "", by_category: "" },

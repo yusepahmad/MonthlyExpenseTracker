@@ -2,7 +2,7 @@
 
 Plan lengkap (semua 13 fase, detail desain & file): `/home/yusep/.claude/plans/tutup-navbar-nya-structured-kettle.md`
 
-## Sudah selesai (Fase 0–10)
+## Sudah selesai (Fase 0–11)
 
 - **Fase 0** — Bug fixes & UI polish: sidebar dirampingkan, search blur fix, custom DatePicker, modal scroll fix, draft form preservation saat klik-luar-modal.
 - **Fase 1** — Dashboard Insight: pengeluaran/pendapatan terbesar (`useInsights.js`), kalimat tren kategori bulan-ke-bulan.
@@ -15,6 +15,7 @@ Plan lengkap (semua 13 fase, detail desain & file): `/home/yusep/.claude/plans/t
 - **Fase 8** — Wishlist: halaman tersendiri `WishlistPage.jsx`, saran beli/tunda di `lib/wishlist.js` (`evaluatePurchase`) reuse burn-rate dari `useCashFlowPrediction`. Aturan tunda: sisa saldo setelah beli < 1 minggu burn-rate **ATAU** < 20% saldo saat ini (gabungan, tunda jika salah satu terpenuhi). State baru `wishlist[]` + tabel Supabase `wishlist` (`supabase/migration_003_wishlist.sql`) + sheet Excel `Wishlist`.
 - **Fase 10** — Reminder Notifikasi Harian (dikerjakan sebelum Fase 9 atas permintaan user): `useReminder.js` minta izin Notification API via prompt sekali (`ReminderPromptDialog.jsx`, tampil saat pertama buka app, tidak pernah nanya lagi setelah dijawab), cek jam 20:00 apakah hari itu sudah ada transaksi, kalau belum kirim browser notification. **Limitasi jelas dilabel di UI**: hanya aktif selagi tab terbuka (app tidak punya service worker/PWA, bukan push notification sungguhan).
 - **Fase 9** — Multi-Account + Transfer: halaman `AccountsPage.jsx` (CRUD akun, saldo per-akun via `useAccountBalances.js`), `TransactionForm.jsx` punya Dropdown pilih akun + toggle mode "Transfer" (`TransferForm.jsx`). Transfer = 2 transaksi terhubung via `transfer_id` (expense di akun asal + income di akun tujuan, kategori "Lainnya") — bukan tipe transaksi baru. **Migrasi data lama**: semua transaksi existing tanpa `account` di-default ke `acc_cash` ("Cash"), baik di `AppContext.jsx` (state lokal/fallback) maupun Supabase (`supabase/migration_004_accounts.sql` — ALTER TABLE + backfill otomatis). **Audit regresi penting**: transfer dikecualikan dari semua total pemasukan/pengeluaran (`excludeTransfers()` di `lib/utils.js`, dipakai di `useInsights`, `useReportData`, `useBudget`, `useCashFlowPrediction`, `MonthSummary`, `CategoryChart`, `excel.js buildSummary()`) — kalau tidak, transfer akan dihitung dua kali sebagai pemasukan DAN pengeluaran sungguhan, menggelembungkan kedua total. Diverifikasi langsung: migrasi data lama ke Cash, transfer antar akun, dan totals dashboard TIDAK berubah setelah transfer (hanya saldo per-akun yang berubah).
+- **Fase 11** — Challenges (gamifikasi): halaman `ChallengesPage.jsx`, evaluasi murni di `lib/challenges.js` (`evaluateChallenge`, didesain sebagai registry per tipe — `EVALUATORS` map — supaya tipe baru tinggal ditambah entry, tidak perlu ubah pemanggil). 2 tipe sesuai permintaan user: `no_spend` (gagal begitu ADA pengeluaran kategori tsb dalam window tanggal) dan `spending_limit` (gagal kalau total pengeluaran kategori tsb melebihi target). Status (`upcoming`/`active`/`completed`/`failed`) **selalu dihitung ulang dari transaksi + tanggal hari ini**, tidak pernah disimpan sebagai field statis — supaya tidak pernah stale. State baru `challenges[]` + tabel Supabase `challenges` (`supabase/migration_005_challenges.sql`) + sheet Excel `Challenges`. Diverifikasi langsung: challenge no-spend berstatus "Berjalan" sampai transaksi kategori terkait ditambahkan, lalu otomatis berubah jadi "Gagal" dengan progress bar merah.
 
 Sejak Fase 6 juga sudah migrasi ke Supabase (cross-device cloud sync, lihat `src/lib/api/`, `AppContext.jsx`) dan beberapa bug fix tambahan di luar plan asli:
 - Fix kategori duplikat saat tambah/edit kategori (override-by-name pattern di `categories.js`).
@@ -25,13 +26,12 @@ Sejak Fase 6 juga sudah migrasi ke Supabase (cross-device cloud sync, lihat `src
 
 Semua fase di atas sudah diverifikasi end-to-end via browser (Playwright) dan `npm run build` sukses tanpa error.
 
-## Sisa pekerjaan (Fase 11, 12)
+## Sisa pekerjaan (Fase 12)
 
 | Fase | Nama | Kompleksitas | Catatan kunci |
 |---|---|---|---|
-| 11 | Challenges (gamifikasi) | Sedang | Mulai dengan 2 tipe saja sesuai contoh user (no-spend kategori X selama N hari, hemat kategori Y di bawah Rp tertentu). |
 | 12 | Financial Health Score | Sedang | **Keputusan tertunda**: komponen "hutang" di formula skor tidak punya data sama sekali di app ini. Opsi (a) skip dari skor v1 + label "belum memperhitungkan utang" (direkomendasikan), atau (b) bangun debt-tracking dasar dulu. |
 
 ## Cara lanjut sesi berikutnya
 
-Baca file plan di atas untuk detail desain tiap fase (file yang disentuh, skema data, keputusan teknis). Semua fase 0-10 sudah selesai — lanjutkan ke Fase 11 secara berurutan, atau user bisa minta lompat/reprioritaskan fase tertentu.
+Baca file plan di atas untuk detail desain Fase 12 (file yang disentuh, skema data, keputusan teknis). Ini fase terakhir dari plan 13-fase — begitu selesai, seluruh wishlist awal sudah tertangani. Mulai dengan menanyakan keputusan hutang ke user sebelum coding (lihat opsi (a)/(b) di atas).
