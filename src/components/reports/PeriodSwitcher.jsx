@@ -2,6 +2,7 @@ const PERIODS = [
   { value: "week", label: "Mingguan" },
   { value: "month", label: "Bulanan" },
   { value: "year", label: "Tahunan" },
+  { value: "custom", label: "Custom" },
 ];
 
 export default function PeriodSwitcher({ value, onChange }) {

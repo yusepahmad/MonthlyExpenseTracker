@@ -73,6 +73,22 @@ Lanjutan dari goal *financial freedom* user — "uang yang disia-siakan" didefin
 
 Diverifikasi via unit test logic langsung (`nonEssentialTrend`, `totalBudgetOverspend`, `subscriptionsToReview` — semua benar menghitung rata-rata, exclude esensial, dan threshold 3 bulan) karena akun live belum punya cukup riwayat data (1 bulan transaksi, belum ada budget diset) untuk memicu kondisi insight secara natural — perilaku card menyembunyikan diri saat itu sudah dikonfirmasi benar (bukan bug).
 
-## Status: plan 13-fase selesai + 3 fitur tambahan
+## Fitur pasca-plan: Laporan Keuangan Lengkap (PDF/CSV) + Custom Date Range
+
+Fase 4 asli cuma punya PDF via `window.print()` (screenshot chart doang, tanpa daftar transaksi) dan CSV transaksi mentah saja. User minta laporan disatukan jadi laporan keuangan bulanan lengkap untuk dianalisis, plus custom date range (tidak cuma preset minggu/bulan/tahun).
+
+**Custom date range**: `PeriodSwitcher.jsx` dapat opsi ke-4 "Custom" yang memunculkan 2 `DatePicker` (dari–sampai) di `ReportsPage.jsx`. `useReportData.js` di-extend menerima param `customRange` opsional.
+
+**Laporan disatukan**: `useReportData.js` sekarang juga menghitung `budgetReport` (realisasi vs limit per kategori untuk semua bulan dalam rentang), `allocationByMonth` (snapshot 20/10/70 per bulan — multi-bulan untuk rentang custom, bukan rata-rata/jumlah lintas bulan karena itu tidak masuk akal untuk persentase), dan menyertakan `savingsGoals`/`debts` (snapshot kondisi saat ini, bukan historis per periode karena keduanya tidak disimpan dengan timestamp progress).
+
+**Upgrade PDF ke jsPDF + jspdf-autotable** (ganti `window.print()`) — keputusan user secara eksplisit demi kontrol layout tabel & page break yang presisi, walau nambah dependency (`jspdf`, `jspdf-autotable`, keduanya bawa `html2canvas`/`dompurify` transitif, ukuran bundle naik signifikan tapi diterima karena ini fitur produktivitas, bukan core loop). `lib/pdfReport.js` — `generateReportPdf()`/`downloadReportPdf()`, render semua section sebagai tabel ber-halaman otomatis: Ringkasan, Pengeluaran per Kategori (+ %), Alokasi Keuangan per bulan, Budget vs Realisasi (merah kalau over), Target Tabungan, Hutang, Daftar Transaksi lengkap (hijau/merah pemasukan/pengeluaran). Footer nomor halaman otomatis di semua halaman.
+
+**CSV juga disatukan**: `exportReportToCsv()` di `excel.js` — satu file CSV multi-section (judul section di awal tiap blok: RINGKASAN, PENGELUARAN PER KATEGORI, dst, sama seperti struktur PDF), pakai UTF-8 BOM supaya simbol "Rp" tidak rusak saat dibuka di Excel. Tombol lama `exportTransactionsToCsv` (transaksi mentah saja) masih ada sebagai opsi sekunder ("Transaksi Saja") untuk yang cuma mau data mentah tanpa ringkasan.
+
+**File kunci**: `hooks/useReportData.js`, `lib/pdfReport.js` (baru), `lib/excel.js` (`exportReportToCsv` baru), `pages/ReportsPage.jsx` (dirombak total — render semua section di layar juga, bukan cuma di file export), `components/reports/PeriodSwitcher.jsx` (opsi Custom).
+
+Diverifikasi langsung: PDF & CSV ter-download dengan benar lewat tombol di halaman Laporan, isi PDF dicek manual — semua section (ringkasan, kategori, alokasi, budget, transaksi) lengkap dan terformat rapi dengan warna status yang benar; CSV dicek isinya mengandung BOM + semua section yang sama dengan label section jelas.
+
+## Status: plan 13-fase selesai + 4 fitur tambahan
 
 Tidak ada fase tersisa dari plan asli. Untuk kelanjutan, baca file plan di atas untuk konteks desain sebelumnya, atau tanya user fitur/perbaikan baru apa yang diinginkan.

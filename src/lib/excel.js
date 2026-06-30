@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import { excludeTransfers } from "./utils";
+import { excludeTransfers, formatCurrency, formatDate } from "./utils";
 
 const SHEET_NAMES = {
   TRANSAKSI: "Transaksi",
@@ -239,6 +239,134 @@ export function exportTransactionsToCsv(transactions, fileName = "transaksi.csv"
   const ws = XLSX.utils.json_to_sheet(transactions && transactions.length ? transactions : [{}]);
   const csv = XLSX.utils.sheet_to_csv(ws);
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+// Builds one multi-section CSV mirroring the PDF report (summary, category
+// breakdown, allocation, budget, savings, debts, full transaction list) —
+// every row tagged with which section it belongs to in the first column,
+// so the whole thing stays a single importable/analyzable file instead of
+// scattering the data across several exports.
+function csvEscape(value) {
+  const str = String(value ?? "");
+  return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+}
+
+function csvRow(cells) {
+  return cells.map(csvEscape).join(",");
+}
+
+export function exportReportToCsv(reportData, periodLabel, fileName = "laporan-keuangan.csv") {
+  const lines = [];
+
+  lines.push(csvRow(["Laporan Keuangan"]));
+  lines.push(csvRow(["Periode", periodLabel]));
+  lines.push(csvRow(["Dibuat", formatDate(new Date().toISOString().slice(0, 10))]));
+  lines.push("");
+
+  lines.push(csvRow(["RINGKASAN"]));
+  lines.push(csvRow(["Total Pemasukan", "Total Pengeluaran", "Saldo Bersih"]));
+  lines.push(
+    csvRow([
+      formatCurrency(reportData.totalIncome),
+      formatCurrency(reportData.totalExpense),
+      formatCurrency(reportData.totalIncome - reportData.totalExpense),
+    ])
+  );
+  lines.push("");
+
+  if (reportData.categoryTotals.length > 0) {
+    lines.push(csvRow(["PENGELUARAN PER KATEGORI"]));
+    lines.push(csvRow(["Kategori", "Total", "% dari Total Pengeluaran"]));
+    reportData.categoryTotals.forEach((c) => {
+      const pct = reportData.totalExpense > 0 ? ((c.value / reportData.totalExpense) * 100).toFixed(1) : "0";
+      lines.push(csvRow([c.category, formatCurrency(c.value), `${pct}%`]));
+    });
+    lines.push("");
+  }
+
+  if (reportData.allocationByMonth.length > 0) {
+    lines.push(csvRow(["ALOKASI KEUANGAN (DANA DARURAT / INVESTASI / BIAYA HIDUP)"]));
+    lines.push(csvRow(["Bulan", "Pemasukan", "Dana Darurat Teralokasi", "Dana Darurat Target", "Investasi Teralokasi", "Investasi Target", "Sisa Riil Biaya Hidup"]));
+    reportData.allocationByMonth.forEach((a, i) => {
+      lines.push(
+        csvRow([
+          reportData.allocationMonthLabels[i] || "-",
+          formatCurrency(a.monthIncome),
+          formatCurrency(a.emergencyAllocated),
+          formatCurrency(a.emergencyTarget),
+          formatCurrency(a.investmentAllocated),
+          formatCurrency(a.investmentTarget),
+          a.realRemainingForLiving < 0
+            ? `-${formatCurrency(Math.abs(a.realRemainingForLiving))}`
+            : formatCurrency(a.realRemainingForLiving),
+        ])
+      );
+    });
+    lines.push("");
+  }
+
+  if (reportData.budgetReport.length > 0) {
+    lines.push(csvRow(["BUDGET VS REALISASI"]));
+    lines.push(csvRow(["Kategori", "Realisasi", "Budget", "Status"]));
+    reportData.budgetReport.forEach((b) => {
+      lines.push(
+        csvRow([
+          b.category,
+          formatCurrency(b.spent),
+          b.limit !== null ? formatCurrency(b.limit) : "-",
+          b.limit === null ? "Tanpa budget" : b.isOverBudget ? "Melebihi budget" : "Sesuai budget",
+        ])
+      );
+    });
+    lines.push("");
+  }
+
+  if (reportData.savingsGoals.length > 0) {
+    lines.push(csvRow(["TARGET TABUNGAN (SNAPSHOT SAAT INI)"]));
+    lines.push(csvRow(["Nama", "Terkumpul", "Target", "Progress"]));
+    reportData.savingsGoals.forEach((g) => {
+      const pct = g.targetAmount > 0 ? Math.min(100, Math.round((g.currentAmount / g.targetAmount) * 100)) : 0;
+      lines.push(csvRow([g.name, formatCurrency(g.currentAmount), formatCurrency(g.targetAmount), `${pct}%`]));
+    });
+    lines.push("");
+  }
+
+  if (reportData.debts.length > 0) {
+    lines.push(csvRow(["HUTANG (SNAPSHOT SAAT INI)"]));
+    lines.push(csvRow(["Nama", "Sisa", "Total", "Lunas"]));
+    reportData.debts.forEach((d) => {
+      const paidPct = d.totalAmount > 0 ? Math.round(((d.totalAmount - d.remainingAmount) / d.totalAmount) * 100) : 0;
+      lines.push(csvRow([d.name, formatCurrency(d.remainingAmount), formatCurrency(d.totalAmount), d.remainingAmount <= 0 ? "Ya" : `${paidPct}%`]));
+    });
+    lines.push("");
+  }
+
+  if (reportData.periodTransactions.length > 0) {
+    lines.push(csvRow(["DAFTAR TRANSAKSI"]));
+    lines.push(csvRow(["Tanggal", "Kategori", "Sub-kategori", "Deskripsi", "Tipe", "Nominal"]));
+    [...reportData.periodTransactions]
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .forEach((t) => {
+        lines.push(
+          csvRow([
+            formatDate(t.date),
+            t.category,
+            t.subcategory || "-",
+            t.description || "-",
+            t.type === "income" ? "Pemasukan" : "Pengeluaran",
+            `${t.type === "income" ? "+" : "-"}${formatCurrency(t.amount)}`,
+          ])
+        );
+      });
+  }
+
+  const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
