@@ -2,7 +2,7 @@
 
 Plan lengkap (semua 13 fase, detail desain & file): `/home/yusep/.claude/plans/tutup-navbar-nya-structured-kettle.md`
 
-## Sudah selesai (Fase 0–6)
+## Sudah selesai (Fase 0–8)
 
 - **Fase 0** — Bug fixes & UI polish: sidebar dirampingkan, search blur fix, custom DatePicker, modal scroll fix, draft form preservation saat klik-luar-modal.
 - **Fase 1** — Dashboard Insight: pengeluaran/pendapatan terbesar (`useInsights.js`), kalimat tren kategori bulan-ke-bulan.
@@ -11,15 +11,22 @@ Plan lengkap (semua 13 fase, detail desain & file): `/home/yusep/.claude/plans/t
 - **Fase 4** — Halaman Laporan (`ReportsPage.jsx`): toggle Mingguan/Bulanan/Tahunan + Pie/Bar/Line chart, export CSV & PDF (print-to-PDF browser).
 - **Fase 5** — Target Tabungan: halaman tersendiri `SavingsGoalsPage.jsx`, progress manual (`currentAmount` diedit langsung, bukan auto dari transaksi).
 - **Fase 6** — Smart Suggestion & rule-based "AI" Categorization (`categoryKeywords.js`, `smartSuggestion.js`) — **bukan AI/LLM sungguhan**, murni keyword dictionary + substring match lokal, tanpa network call.
+- **Fase 7** — Cash Flow Prediction: `useCashFlowPrediction.js` + `CashFlowPredictionCard.jsx`, label "Saldo Keseluruhan" dipisah jelas dari "Saldo Bulan Ini" di `MonthSummary.jsx` agar tidak ambigu.
+- **Fase 8** — Wishlist: halaman tersendiri `WishlistPage.jsx`, saran beli/tunda di `lib/wishlist.js` (`evaluatePurchase`) reuse burn-rate dari `useCashFlowPrediction`. Aturan tunda: sisa saldo setelah beli < 1 minggu burn-rate **ATAU** < 20% saldo saat ini (gabungan, tunda jika salah satu terpenuhi). State baru `wishlist[]` + tabel Supabase `wishlist` (`supabase/migration_003_wishlist.sql`) + sheet Excel `Wishlist`.
+
+Sejak Fase 6 juga sudah migrasi ke Supabase (cross-device cloud sync, lihat `src/lib/api/`, `AppContext.jsx`) dan beberapa bug fix tambahan di luar plan asli:
+- Fix kategori duplikat saat tambah/edit kategori (override-by-name pattern di `categories.js`).
+- Fitur Kelola Kategori (CRUD kategori + sub-kategori, termasuk edit kategori default) via modal di `TransactionForm.jsx` → `CategoryManager.jsx`.
+- Fix Modal kedua (Kelola Kategori dari dalam form Tambah Transaksi) bertumpuk dengan modal pertama — `Modal.jsx` sekarang pakai React Portal ke `document.body`.
+- Fix bug rename kategori default (mis. "Makan" → "Makan & Minuman") yang menyebabkan duplikat — ditambah field stabil `overridesDefault` (kolom Supabase `overrides_default`, lihat `supabase/migration_002_overrides_default.sql`) yang tetap terhubung ke kategori default aslinya walau di-rename berkali-kali.
+- Warna kategori baru/custom dijamin unik (cek warna yang sudah dipakai default+custom sebelum assign, fallback ke hash warna deterministik).
 
 Semua fase di atas sudah diverifikasi end-to-end via browser (Playwright) dan `npm run build` sukses tanpa error.
 
-## Sisa pekerjaan (Fase 7–12)
+## Sisa pekerjaan (Fase 9–12)
 
 | Fase | Nama | Kompleksitas | Catatan kunci |
 |---|---|---|---|
-| 7 | Cash Flow Prediction | Kecil | Murni kalkulasi baru (`useCashFlowPrediction.js`), tidak ada state baru. **Cek dulu** definisi "saldo" yang dipakai `MonthSummary.jsx` agar tidak ada 2 angka saldo berbeda di dashboard. |
-| 8 | Wishlist + saran tunda beli | Sedang | **Harus setelah Fase 7** — reuse burn-rate dari Cash Flow Prediction untuk aturan "tunda pembelian". Perlu state baru `wishlist[]` + sheet Excel baru. |
 | 9 | Multi-Account + Transfer | **Besar/berisiko** | Migrasi data transaksi existing (tambah field `account`, default "Cash" untuk data lama). Transfer = 2 transaksi terhubung via `transfer_id`, bukan tipe baru. Wajib audit ulang semua hook yang menjumlahkan transaksi (`useBudget`, `useInsights`, `CategoryChart`, dst). |
 | 10 | Reminder notifikasi harian | Kecil | **Limitasi**: Notification API + setInterval hanya jalan selagi tab terbuka (app tidak punya service worker/PWA). Perlu label jelas di UI. |
 | 11 | Challenges (gamifikasi) | Sedang | Mulai dengan 2 tipe saja sesuai contoh user (no-spend kategori X selama N hari, hemat kategori Y di bawah Rp tertentu). |
@@ -27,4 +34,6 @@ Semua fase di atas sudah diverifikasi end-to-end via browser (Playwright) dan `n
 
 ## Cara lanjut sesi berikutnya
 
-Baca file plan di atas untuk detail desain tiap fase (file yang disentuh, skema data, keputusan teknis). Lanjutkan dari Fase 7 secara berurutan, atau user bisa minta lompat/reprioritaskan fase tertentu.
+Baca file plan di atas untuk detail desain tiap fase (file yang disentuh, skema data, keputusan teknis). Lanjutkan dari Fase 9 secara berurutan, atau user bisa minta lompat/reprioritaskan fase tertentu.
+
+**Catatan untuk Fase 9 (Multi-Account)**: karena app sekarang sudah pakai Supabase (bukan cuma localStorage seperti saat plan awal ditulis), migrasi data transaksi existing harus dilakukan di level Supabase (ALTER TABLE + backfill), bukan cuma di `AppContext.jsx` init seperti yang dijelaskan di plan asli. Sesuaikan detail teknisnya saat fase itu dimulai.

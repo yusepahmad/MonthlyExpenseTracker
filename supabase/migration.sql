@@ -67,6 +67,16 @@ create table if not exists savings_goals (
   primary key (id, user_id)
 );
 
+create table if not exists wishlist (
+  id text not null,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  price numeric not null,
+  priority text default 'medium' check (priority in ('low', 'medium', 'high')),
+  created_at timestamptz default now(),
+  primary key (id, user_id)
+);
+
 create table if not exists app_settings (
   user_id uuid not null references auth.users(id) on delete cascade,
   active_month text,
@@ -80,6 +90,7 @@ alter table budgets enable row level security;
 alter table recurring enable row level security;
 alter table custom_categories enable row level security;
 alter table savings_goals enable row level security;
+alter table wishlist enable row level security;
 alter table app_settings enable row level security;
 
 create policy "Users manage their own transactions" on transactions
@@ -95,6 +106,9 @@ create policy "Users manage their own custom_categories" on custom_categories
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 create policy "Users manage their own savings_goals" on savings_goals
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "Users manage their own wishlist" on wishlist
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 create policy "Users manage their own app_settings" on app_settings

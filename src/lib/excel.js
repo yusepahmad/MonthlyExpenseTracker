@@ -7,6 +7,7 @@ const SHEET_NAMES = {
   SUMMARY: "Summary",
   CATEGORIES: "Categories",
   SAVINGS_GOALS: "SavingsGoals",
+  WISHLIST: "Wishlist",
 };
 
 export function parseExcelFile(file) {
@@ -21,6 +22,7 @@ export function parseExcelFile(file) {
           recurring: normalizeRecurring(sheetToJson(wb, SHEET_NAMES.RECURRING)),
           customCategories: normalizeCategories(sheetToJson(wb, SHEET_NAMES.CATEGORIES)),
           savingsGoals: normalizeSavingsGoals(sheetToJson(wb, SHEET_NAMES.SAVINGS_GOALS)),
+          wishlist: normalizeWishlist(sheetToJson(wb, SHEET_NAMES.WISHLIST)),
         });
       } catch (err) {
         reject(err);
@@ -67,6 +69,17 @@ function normalizeSavingsGoals(rows) {
     }));
 }
 
+function normalizeWishlist(rows) {
+  return rows
+    .filter((r) => r.id)
+    .map((r) => ({
+      id: r.id,
+      name: r.name,
+      price: Number(r.price) || 0,
+      priority: r.priority || "medium",
+    }));
+}
+
 function normalizeCategories(rows) {
   return rows
     .filter((r) => r.name)
@@ -87,6 +100,7 @@ export function exportToExcel(state, fileName = "pengeluaran.xlsx") {
   appendSheet(wb, SHEET_NAMES.RECURRING, state.recurring);
   appendSheet(wb, SHEET_NAMES.CATEGORIES, serializeCategories(state.customCategories));
   appendSheet(wb, SHEET_NAMES.SAVINGS_GOALS, state.savingsGoals);
+  appendSheet(wb, SHEET_NAMES.WISHLIST, state.wishlist);
   appendSheet(wb, SHEET_NAMES.SUMMARY, buildSummary(state.transactions));
 
   XLSX.writeFile(wb, fileName);
@@ -196,6 +210,9 @@ export function generateTemplateWorkbook() {
   ]);
   appendSheet(wb, SHEET_NAMES.SAVINGS_GOALS, [
     { id: "goal_001", name: "Laptop", targetAmount: 15000000, currentAmount: 9000000, deadline: "2025-12-31" },
+  ]);
+  appendSheet(wb, SHEET_NAMES.WISHLIST, [
+    { id: "wish_001", name: "Headphone", price: 1200000, priority: "medium" },
   ]);
   appendSheet(wb, SHEET_NAMES.SUMMARY, [
     { month: "", total_expense: "", total_income: "", net: "", by_category: "" },

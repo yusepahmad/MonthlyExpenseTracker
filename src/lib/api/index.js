@@ -3,22 +3,24 @@ import { fetchBudgets, replaceBudgets } from "./budgetsApi";
 import { fetchRecurring, replaceRecurring } from "./recurringApi";
 import { fetchCustomCategories, replaceCustomCategories } from "./categoriesApi";
 import { fetchSavingsGoals, insertSavingsGoal } from "./savingsGoalsApi";
+import { fetchWishlist, insertWishlistItem } from "./wishlistApi";
 import { fetchActiveMonth, saveActiveMonth } from "./settingsApi";
 import { loadState as loadLocalState } from "../storage";
 
 const MIGRATION_FLAG_KEY = "expense-tracker-migrated-to-cloud";
 
 export async function loadAllData(userId) {
-  const [transactions, budgets, recurring, customCategories, savingsGoals, activeMonth] = await Promise.all([
+  const [transactions, budgets, recurring, customCategories, savingsGoals, wishlist, activeMonth] = await Promise.all([
     fetchTransactions(userId),
     fetchBudgets(userId),
     fetchRecurring(userId),
     fetchCustomCategories(userId),
     fetchSavingsGoals(userId),
+    fetchWishlist(userId),
     fetchActiveMonth(userId),
   ]);
 
-  return { transactions, budgets, recurring, customCategories, savingsGoals, activeMonth };
+  return { transactions, budgets, recurring, customCategories, savingsGoals, wishlist, activeMonth };
 }
 
 // One-time migration: if this browser has localStorage data from before
@@ -40,6 +42,7 @@ export async function migrateLocalDataIfNeeded(userId) {
     replaceRecurring(userId, local.recurring || []),
     replaceCustomCategories(userId, local.customCategories || []),
     ...(local.savingsGoals || []).map((g) => insertSavingsGoal(userId, g)),
+    ...(local.wishlist || []).map((w) => insertWishlistItem(userId, w)),
     local.activeMonth ? saveActiveMonth(userId, local.activeMonth) : Promise.resolve(),
   ]);
 

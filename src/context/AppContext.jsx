@@ -7,6 +7,7 @@ import { replaceBudgets } from "../lib/api/budgetsApi";
 import { insertRecurring, updateRecurring as updateRecurringRow, deleteRecurring as deleteRecurringRow } from "../lib/api/recurringApi";
 import { insertCustomCategory, upsertCategoryOverride, deleteCustomCategory } from "../lib/api/categoriesApi";
 import { insertSavingsGoal, updateSavingsGoal as updateSavingsGoalRow, deleteSavingsGoal as deleteSavingsGoalRow } from "../lib/api/savingsGoalsApi";
+import { insertWishlistItem, updateWishlistItem as updateWishlistItemRow, deleteWishlistItem as deleteWishlistItemRow } from "../lib/api/wishlistApi";
 import { saveActiveMonth } from "../lib/api/settingsApi";
 import { replaceAllFromExcelImport } from "../lib/api/bulkApi";
 
@@ -16,6 +17,7 @@ const baseState = {
   recurring: [],
   customCategories: [],
   savingsGoals: [],
+  wishlist: [],
   activeMonth: getCurrentMonth(),
   fileName: null,
 };
@@ -30,6 +32,7 @@ function reducer(state, action) {
         recurring: action.payload.recurring,
         customCategories: action.payload.customCategories || state.customCategories,
         savingsGoals: action.payload.savingsGoals || state.savingsGoals,
+        wishlist: action.payload.wishlist || state.wishlist,
         fileName: action.payload.fileName,
       };
     case "LOAD_FROM_CLOUD":
@@ -40,6 +43,7 @@ function reducer(state, action) {
         recurring: action.payload.recurring,
         customCategories: action.payload.customCategories,
         savingsGoals: action.payload.savingsGoals,
+        wishlist: action.payload.wishlist || [],
         activeMonth: action.payload.activeMonth || state.activeMonth,
       };
     case "ADD_TRANSACTION":
@@ -81,6 +85,17 @@ function reducer(state, action) {
       };
     case "DELETE_SAVINGS_GOAL":
       return { ...state, savingsGoals: state.savingsGoals.filter((g) => g.id !== action.payload) };
+    case "ADD_WISHLIST_ITEM":
+      return { ...state, wishlist: [...state.wishlist, action.payload] };
+    case "UPDATE_WISHLIST_ITEM":
+      return {
+        ...state,
+        wishlist: state.wishlist.map((w) =>
+          w.id === action.payload.id ? { ...w, ...action.payload } : w
+        ),
+      };
+    case "DELETE_WISHLIST_ITEM":
+      return { ...state, wishlist: state.wishlist.filter((w) => w.id !== action.payload) };
     case "ADD_CATEGORY": {
       const { name, type, subcategories, icon } = action.payload;
       if (isCategoryNameTaken(name, state.customCategories)) return state;
@@ -169,6 +184,12 @@ function syncToCloud(userId, action) {
         return updateSavingsGoalRow(userId, action.payload);
       case "DELETE_SAVINGS_GOAL":
         return deleteSavingsGoalRow(userId, action.payload);
+      case "ADD_WISHLIST_ITEM":
+        return insertWishlistItem(userId, action.payload);
+      case "UPDATE_WISHLIST_ITEM":
+        return updateWishlistItemRow(userId, action.payload);
+      case "DELETE_WISHLIST_ITEM":
+        return deleteWishlistItemRow(userId, action.payload);
       case "ADD_CATEGORY":
         return insertCustomCategory(userId, action.payload);
       case "UPDATE_CATEGORY":
