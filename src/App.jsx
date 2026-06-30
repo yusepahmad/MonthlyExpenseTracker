@@ -17,10 +17,11 @@ import SavingsGoalsPage from "./pages/SavingsGoalsPage";
 import WishlistPage from "./pages/WishlistPage";
 import AccountsPage from "./pages/AccountsPage";
 import ChallengesPage from "./pages/ChallengesPage";
+import DebtsPage from "./pages/DebtsPage";
 import LoginPage from "./pages/LoginPage";
 import RecurringDueDialog from "./components/recurring/RecurringDueDialog";
 
-const KNOWN_PAGES = ["dashboard", "transactions", "recurring", "reports", "savings", "wishlist", "accounts", "challenges"];
+const KNOWN_PAGES = ["dashboard", "transactions", "recurring", "reports", "savings", "wishlist", "accounts", "challenges", "debts"];
 
 function AppContent({ user, onSignOut }) {
   const [activePage, setActivePage] = useState("dashboard");
@@ -56,6 +57,7 @@ function AppContent({ user, onSignOut }) {
           {activePage === "wishlist" && <WishlistPage />}
           {activePage === "accounts" && <AccountsPage />}
           {activePage === "challenges" && <ChallengesPage />}
+          {activePage === "debts" && <DebtsPage />}
           {!KNOWN_PAGES.includes(activePage) && (
             <div className="bg-white/50 dark:bg-gray-900/50 backdrop-blur-2xl backdrop-saturate-150 border border-white/60 dark:border-gray-800/60 rounded-2xl shadow-soft p-8 text-center">
               <p className="text-sm text-gray-400">

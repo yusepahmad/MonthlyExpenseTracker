@@ -11,6 +11,7 @@ const SHEET_NAMES = {
   WISHLIST: "Wishlist",
   ACCOUNTS: "Accounts",
   CHALLENGES: "Challenges",
+  DEBTS: "Debts",
 };
 
 export function parseExcelFile(file) {
@@ -28,6 +29,7 @@ export function parseExcelFile(file) {
           wishlist: normalizeWishlist(sheetToJson(wb, SHEET_NAMES.WISHLIST)),
           accounts: normalizeAccounts(sheetToJson(wb, SHEET_NAMES.ACCOUNTS)),
           challenges: normalizeChallenges(sheetToJson(wb, SHEET_NAMES.CHALLENGES)),
+          debts: normalizeDebts(sheetToJson(wb, SHEET_NAMES.DEBTS)),
         });
       } catch (err) {
         reject(err);
@@ -111,6 +113,18 @@ function normalizeChallenges(rows) {
     }));
 }
 
+function normalizeDebts(rows) {
+  return rows
+    .filter((r) => r.id)
+    .map((r) => ({
+      id: r.id,
+      name: r.name,
+      totalAmount: Number(r.totalAmount) || 0,
+      remainingAmount: Number(r.remainingAmount) || 0,
+      dueDate: r.dueDate || "",
+    }));
+}
+
 function normalizeCategories(rows) {
   return rows
     .filter((r) => r.name)
@@ -134,6 +148,7 @@ export function exportToExcel(state, fileName = "pengeluaran.xlsx") {
   appendSheet(wb, SHEET_NAMES.WISHLIST, state.wishlist);
   appendSheet(wb, SHEET_NAMES.ACCOUNTS, state.accounts);
   appendSheet(wb, SHEET_NAMES.CHALLENGES, state.challenges);
+  appendSheet(wb, SHEET_NAMES.DEBTS, state.debts);
   appendSheet(wb, SHEET_NAMES.SUMMARY, buildSummary(state.transactions));
 
   XLSX.writeFile(wb, fileName);
@@ -261,6 +276,9 @@ export function generateTemplateWorkbook() {
       startDate: "2025-06-01",
       endDate: "2025-06-07",
     },
+  ]);
+  appendSheet(wb, SHEET_NAMES.DEBTS, [
+    { id: "debt_001", name: "Cicilan Motor", totalAmount: 20000000, remainingAmount: 12000000, dueDate: "2026-12-31" },
   ]);
   appendSheet(wb, SHEET_NAMES.SUMMARY, [
     { month: "", total_expense: "", total_income: "", net: "", by_category: "" },

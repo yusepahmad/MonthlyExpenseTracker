@@ -7,7 +7,7 @@ import { replaceCustomCategories } from "./categoriesApi";
 // delete-then-insert per table, same pattern as the bulk-replace helpers
 // already used for budgets/recurring/categories.
 export async function replaceAllFromExcelImport(userId, payload) {
-  const { transactions, budgets, recurring, customCategories, savingsGoals, wishlist, accounts, challenges } = payload;
+  const { transactions, budgets, recurring, customCategories, savingsGoals, wishlist, accounts, challenges, debts } = payload;
 
   const { error: deleteError } = await supabase.from("transactions").delete().eq("user_id", userId);
   if (deleteError) throw deleteError;
@@ -91,6 +91,22 @@ export async function replaceAllFromExcelImport(userId, payload) {
     }));
     const { error: challengesInsertError } = await supabase.from("challenges").insert(challengeRows);
     if (challengesInsertError) throw challengesInsertError;
+  }
+
+  const { error: debtsDeleteError } = await supabase.from("debts").delete().eq("user_id", userId);
+  if (debtsDeleteError) throw debtsDeleteError;
+
+  if (debts && debts.length > 0) {
+    const debtRows = debts.map((d) => ({
+      id: d.id,
+      user_id: userId,
+      name: d.name,
+      total_amount: d.totalAmount,
+      remaining_amount: d.remainingAmount,
+      due_date: d.dueDate || null,
+    }));
+    const { error: debtsInsertError } = await supabase.from("debts").insert(debtRows);
+    if (debtsInsertError) throw debtsInsertError;
   }
 
   await Promise.all([

@@ -10,6 +10,7 @@ import { insertSavingsGoal, updateSavingsGoal as updateSavingsGoalRow, deleteSav
 import { insertWishlistItem, updateWishlistItem as updateWishlistItemRow, deleteWishlistItem as deleteWishlistItemRow } from "../lib/api/wishlistApi";
 import { insertAccount, updateAccount as updateAccountRow, deleteAccount as deleteAccountRow } from "../lib/api/accountsApi";
 import { insertChallenge, updateChallenge as updateChallengeRow, deleteChallenge as deleteChallengeRow } from "../lib/api/challengesApi";
+import { insertDebt, updateDebt as updateDebtRow, deleteDebt as deleteDebtRow } from "../lib/api/debtsApi";
 import { saveActiveMonth } from "../lib/api/settingsApi";
 import { replaceAllFromExcelImport } from "../lib/api/bulkApi";
 
@@ -25,6 +26,7 @@ const baseState = {
   wishlist: [],
   accounts: [DEFAULT_ACCOUNT],
   challenges: [],
+  debts: [],
   activeMonth: getCurrentMonth(),
   fileName: null,
 };
@@ -54,6 +56,7 @@ function reducer(state, action) {
         wishlist: action.payload.wishlist || state.wishlist,
         accounts: withDefaultAccountSeed(action.payload.accounts || state.accounts),
         challenges: action.payload.challenges || state.challenges,
+        debts: action.payload.debts || state.debts,
         fileName: action.payload.fileName,
       };
     case "LOAD_FROM_CLOUD":
@@ -67,6 +70,7 @@ function reducer(state, action) {
         accounts: withDefaultAccountSeed(action.payload.accounts),
         wishlist: action.payload.wishlist || [],
         challenges: action.payload.challenges || [],
+        debts: action.payload.debts || [],
         activeMonth: action.payload.activeMonth || state.activeMonth,
       };
     case "ADD_TRANSACTION":
@@ -161,6 +165,15 @@ function reducer(state, action) {
       };
     case "DELETE_CHALLENGE":
       return { ...state, challenges: state.challenges.filter((c) => c.id !== action.payload) };
+    case "ADD_DEBT":
+      return { ...state, debts: [...state.debts, action.payload] };
+    case "UPDATE_DEBT":
+      return {
+        ...state,
+        debts: state.debts.map((d) => (d.id === action.payload.id ? { ...d, ...action.payload } : d)),
+      };
+    case "DELETE_DEBT":
+      return { ...state, debts: state.debts.filter((d) => d.id !== action.payload) };
     case "ADD_CATEGORY": {
       const { name, type, subcategories, icon } = action.payload;
       if (isCategoryNameTaken(name, state.customCategories)) return state;
@@ -272,6 +285,12 @@ function syncToCloud(userId, action) {
         return updateChallengeRow(userId, action.payload);
       case "DELETE_CHALLENGE":
         return deleteChallengeRow(userId, action.payload);
+      case "ADD_DEBT":
+        return insertDebt(userId, action.payload);
+      case "UPDATE_DEBT":
+        return updateDebtRow(userId, action.payload);
+      case "DELETE_DEBT":
+        return deleteDebtRow(userId, action.payload);
       case "ADD_CATEGORY":
         return insertCustomCategory(userId, action.payload);
       case "UPDATE_CATEGORY":
