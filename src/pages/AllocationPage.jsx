@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Settings2, ShieldCheck, TrendingUp, Wallet } from "lucide-react";
+import { Settings2, ShieldCheck, TrendingUp, TrendingDown, Wallet, AlertTriangle, PencilLine } from "lucide-react";
 import { useFinancialAllocation } from "../hooks/useFinancialAllocation";
 import { formatCurrency } from "../lib/utils";
 import AllocationSettingsForm from "../components/allocation/AllocationSettingsForm";
+import InvestmentValueForm from "../components/allocation/InvestmentValueForm";
 import Modal from "../components/ui/Modal";
 
 function ProgressRow({ label, allocated, target, percent, barClass }) {
@@ -24,11 +25,24 @@ function ProgressRow({ label, allocated, target, percent, barClass }) {
   );
 }
 
+function CarryOverNote({ amount, label }) {
+  if (amount <= 0) return null;
+  return (
+    <p className="flex items-start gap-1.5 text-xs font-light text-amber-600 dark:text-amber-400 mt-2">
+      <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+      Ada kekurangan {label} {formatCurrency(amount)} dari bulan-bulan sebelumnya, ikut ditambahkan ke target bulan ini — seperti hutang ke diri sendiri sampai tertutup.
+    </p>
+  );
+}
+
 export default function AllocationPage() {
   const allocation = useFinancialAllocation();
   const [showSettings, setShowSettings] = useState(false);
+  const [showInvestmentValue, setShowInvestmentValue] = useState(false);
 
   const hasIncome = allocation.monthIncome > 0;
+  const hasInvestmentValue = allocation.investmentReturn !== null;
+  const isGain = hasInvestmentValue && allocation.investmentReturn.gain >= 0;
 
   return (
     <div>
@@ -58,7 +72,7 @@ export default function AllocationPage() {
               {formatCurrency(allocation.netForLiving)}
             </p>
             <p className="relative text-xs font-light text-white/70 mt-2">
-              Total pemasukan bulan ini {formatCurrency(allocation.monthIncome)}, dikurangi yang sudah dialokasikan ke Dana Darurat & Investasi.
+              Total pemasukan bulan ini {formatCurrency(allocation.monthIncome)}, otomatis dipotong {allocation.settings.emergencyPercent}% Dana Darurat + {allocation.settings.investmentPercent}% Investasi.
             </p>
           </div>
 
@@ -70,12 +84,13 @@ export default function AllocationPage() {
               </h3>
             </div>
             <ProgressRow
-              label="Teralokasikan"
+              label="Bulan ini"
               allocated={allocation.emergencyAllocated}
               target={allocation.emergencyTarget}
               percent={allocation.emergencyProgress}
               barClass="bg-gradient-to-r from-amber-500 to-orange-400"
             />
+            <CarryOverNote amount={allocation.emergencyCarryOver} label="Dana Darurat" />
             {allocation.emergencyAllocated > 0 && (
               <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
                 <div className="rounded-xl bg-white/30 dark:bg-gray-800/40 border border-white/50 dark:border-gray-700/50 px-3 py-2">
@@ -95,19 +110,64 @@ export default function AllocationPage() {
           </div>
 
           <div className="rounded-2xl bg-white/40 dark:bg-gray-900/40 backdrop-blur-2xl backdrop-saturate-150 border border-white/60 dark:border-gray-800/60 p-5 shadow-soft animate-fade-in">
-            <div className="flex items-center gap-2 mb-4">
-              <TrendingUp className="w-4 h-4 text-indigo-500" />
-              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Investasi ({allocation.settings.investmentPercent}%)
-              </h3>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-indigo-500" />
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Investasi ({allocation.settings.investmentPercent}%)
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowInvestmentValue(true)}
+                className="flex items-center gap-1 text-xs text-purple-600 font-medium hover:underline"
+              >
+                <PencilLine className="w-3 h-3" />
+                Update Nilai
+              </button>
             </div>
             <ProgressRow
-              label="Teralokasikan"
+              label="Bulan ini"
               allocated={allocation.investmentAllocated}
               target={allocation.investmentTarget}
               percent={allocation.investmentProgress}
               barClass="bg-gradient-to-r from-indigo-500 to-purple-500"
             />
+            <CarryOverNote amount={allocation.investmentCarryOver} label="Investasi" />
+
+            {hasInvestmentValue ? (
+              <div className="mt-3 rounded-xl bg-white/30 dark:bg-gray-800/40 border border-white/50 dark:border-gray-700/50 px-3 py-2.5">
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="font-light text-gray-400">Total dialokasikan sejak awal</span>
+                  <span className="font-medium text-gray-700 dark:text-gray-200">
+                    {formatCurrency(allocation.investmentReturn.invested)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="font-light text-gray-400">Nilai sekarang</span>
+                  <span className="font-medium text-gray-700 dark:text-gray-200">
+                    {formatCurrency(allocation.investmentReturn.currentValue)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm mt-2 pt-2 border-t border-white/40 dark:border-gray-700/40">
+                  <span className="flex items-center gap-1 font-medium text-gray-600 dark:text-gray-300">
+                    {isGain ? (
+                      <TrendingUp className="w-3.5 h-3.5 text-green-600" />
+                    ) : (
+                      <TrendingDown className="w-3.5 h-3.5 text-red-500" />
+                    )}
+                    {isGain ? "Untung" : "Rugi"}
+                  </span>
+                  <span className={`font-medium ${isGain ? "text-green-600" : "text-red-500"}`}>
+                    {isGain ? "+" : ""}
+                    {formatCurrency(allocation.investmentReturn.gain)} ({allocation.investmentReturn.gainPercent.toFixed(1)}%)
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs font-light text-gray-400 mt-3">
+                Masukkan nilai portofolio investasi kamu sekarang untuk melihat untung/rugi.
+              </p>
+            )}
           </div>
 
           <div className="rounded-2xl bg-white/40 dark:bg-gray-900/40 backdrop-blur-2xl backdrop-saturate-150 border border-white/60 dark:border-gray-800/60 p-5 shadow-soft animate-fade-in">
@@ -118,7 +178,7 @@ export default function AllocationPage() {
               </h3>
             </div>
             <p className="text-xs font-light text-gray-400 mb-2">
-              Target alokasi: {formatCurrency(allocation.livingTarget)}. Tandai pemasukan sebagai Dana Darurat/Investasi di form Tambah Transaksi — sisanya otomatis masuk pos ini.
+              Target alokasi: {formatCurrency(allocation.livingTarget)}. Dihitung otomatis dari sisa pemasukan setelah Dana Darurat & Investasi — tidak perlu ditandai manual.
             </p>
           </div>
         </div>
@@ -126,6 +186,10 @@ export default function AllocationPage() {
 
       <Modal open={showSettings} onClose={() => setShowSettings(false)} title="Atur Persentase Alokasi">
         <AllocationSettingsForm onSaved={() => setShowSettings(false)} onCancel={() => setShowSettings(false)} />
+      </Modal>
+
+      <Modal open={showInvestmentValue} onClose={() => setShowInvestmentValue(false)} title="Update Nilai Investasi">
+        <InvestmentValueForm onSaved={() => setShowInvestmentValue(false)} onCancel={() => setShowInvestmentValue(false)} />
       </Modal>
     </div>
   );

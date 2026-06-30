@@ -128,6 +128,10 @@ create table if not exists app_settings (
   emergency_percent numeric,
   investment_percent numeric,
   living_percent numeric,
+  -- User's self-reported current investment portfolio value, used to
+  -- compute gain/loss against the cumulative amount auto-allocated to
+  -- investment over time. Null until the user enters a value.
+  investment_value numeric,
   updated_at timestamptz default now(),
   primary key (user_id)
 );

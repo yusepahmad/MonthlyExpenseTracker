@@ -18,12 +18,16 @@ export const DEFAULT_ACCOUNT_ID = "acc_cash";
 const DEFAULT_ACCOUNT = { id: DEFAULT_ACCOUNT_ID, name: "Cash", isDefault: true };
 
 // 20/10/70 rule from the user's reference: 20% emergency fund, 10%
-// investment, 70% living costs — applied to total income for the month
-// (every income transaction, not just a "gaji pokok" category).
+// investment, 70% living costs — applied automatically to total income
+// each month (every income transaction, not just a "gaji pokok" category).
+// investmentValue is the user's self-reported current portfolio value,
+// used to compute gain/loss against the cumulative amount auto-allocated
+// to investment over time (see lib/allocation.js).
 export const DEFAULT_ALLOCATION_SETTINGS = {
   emergencyPercent: 20,
   investmentPercent: 10,
   livingPercent: 70,
+  investmentValue: null,
 };
 
 const baseState = {

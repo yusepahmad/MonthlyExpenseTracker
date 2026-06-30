@@ -21,7 +21,12 @@ export default function AllocationSettingsForm({ onSaved, onCancel }) {
 
     dispatch({
       type: "SET_ALLOCATION_SETTINGS",
-      payload: { emergencyPercent: emergency, investmentPercent: investment, livingPercent: living },
+      payload: {
+        ...state.allocationSettings,
+        emergencyPercent: emergency,
+        investmentPercent: investment,
+        livingPercent: living,
+      },
     });
     onSaved?.();
   }

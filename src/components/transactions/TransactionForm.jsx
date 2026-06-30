@@ -24,7 +24,6 @@ export function createBlankDraft() {
     type: "expense",
     description: "",
     account: DEFAULT_ACCOUNT_ID,
-    allocationTag: null,
     categoryTouched: false,
   };
 }
@@ -38,7 +37,6 @@ function transactionToFormState(transaction) {
     type: transaction.type,
     description: transaction.description || "",
     account: transaction.account || DEFAULT_ACCOUNT_ID,
-    allocationTag: transaction.allocationTag || null,
     categoryTouched: true,
   };
 }
@@ -72,14 +70,7 @@ export default function TransactionForm({ onSaved, onDiscard, editingTransaction
 
   function handleTypeChange(type) {
     const firstOfType = getCategoriesByType(type, state.customCategories)[0];
-    setForm((f) => ({
-      ...f,
-      type,
-      category: firstOfType?.name || "",
-      subcategory: "",
-      allocationTag: type === "income" ? f.allocationTag : null,
-      categoryTouched: false,
-    }));
+    setForm((f) => ({ ...f, type, category: firstOfType?.name || "", subcategory: "", categoryTouched: false }));
   }
 
   function handleCategoryChange(category) {
@@ -139,7 +130,6 @@ export default function TransactionForm({ onSaved, onDiscard, editingTransaction
           type: form.type,
           description: form.description,
           account: form.account,
-          allocationTag: form.type === "income" ? form.allocationTag : null,
         },
       });
     } else {
@@ -154,7 +144,6 @@ export default function TransactionForm({ onSaved, onDiscard, editingTransaction
           type: form.type,
           description: form.description,
           account: form.account,
-          allocationTag: form.type === "income" ? form.allocationTag : null,
           is_recurring: false,
           recurring_id: null,
         },
@@ -231,41 +220,6 @@ export default function TransactionForm({ onSaved, onDiscard, editingTransaction
           </button>
         )}
       </div>
-
-      {form.type === "income" && (
-        <div>
-          <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1.5">
-            Alokasikan ke (opsional)
-          </label>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setForm((f) => ({ ...f, allocationTag: f.allocationTag === "emergency" ? null : "emergency" }))}
-              className={`flex-1 py-2 rounded-xl text-xs font-medium transition-all duration-200 ${
-                form.allocationTag === "emergency"
-                  ? "bg-gradient-to-r from-amber-500 to-orange-400 text-white shadow-glow"
-                  : "bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm border border-white/60 dark:border-gray-700/60 text-gray-500 dark:text-gray-300"
-              }`}
-            >
-              Dana Darurat
-            </button>
-            <button
-              type="button"
-              onClick={() => setForm((f) => ({ ...f, allocationTag: f.allocationTag === "investment" ? null : "investment" }))}
-              className={`flex-1 py-2 rounded-xl text-xs font-medium transition-all duration-200 ${
-                form.allocationTag === "investment"
-                  ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-glow"
-                  : "bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm border border-white/60 dark:border-gray-700/60 text-gray-500 dark:text-gray-300"
-              }`}
-            >
-              Investasi
-            </button>
-          </div>
-          <p className="text-xs font-light text-gray-400 mt-1.5">
-            Biarkan tidak ditandai kalau pemasukan ini untuk biaya hidup sehari-hari.
-          </p>
-        </div>
-      )}
 
       <div>
         <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1.5">

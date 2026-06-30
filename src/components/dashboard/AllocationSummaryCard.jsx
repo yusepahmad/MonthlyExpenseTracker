@@ -1,4 +1,4 @@
-import { ShieldCheck, TrendingUp, Wallet } from "lucide-react";
+import { ShieldCheck, TrendingUp, Wallet, AlertTriangle } from "lucide-react";
 import { useFinancialAllocation } from "../../hooks/useFinancialAllocation";
 import { formatCurrency } from "../../lib/utils";
 import AmountText from "../ui/AmountText";
@@ -7,6 +7,8 @@ export default function AllocationSummaryCard({ hideAmount }) {
   const allocation = useFinancialAllocation();
 
   if (allocation.monthIncome <= 0) return null;
+
+  const totalCarryOver = allocation.emergencyCarryOver + allocation.investmentCarryOver;
 
   return (
     <div className="rounded-2xl bg-white/40 dark:bg-gray-900/40 backdrop-blur-2xl backdrop-saturate-150 border border-white/60 dark:border-gray-800/60 p-5 shadow-soft animate-fade-in">
@@ -46,6 +48,13 @@ export default function AllocationSummaryCard({ hideAmount }) {
           </p>
         </div>
       </div>
+
+      {totalCarryOver > 0 && (
+        <p className="flex items-center gap-1.5 text-xs font-light text-amber-600 dark:text-amber-400 mt-3">
+          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+          Ada kekurangan alokasi {hideAmount ? "••••" : formatCurrency(totalCarryOver)} dari bulan lalu, lihat detail di halaman Alokasi.
+        </p>
+      )}
     </div>
   );
 }

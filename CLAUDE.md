@@ -29,21 +29,24 @@ Semua fase di atas sudah diverifikasi end-to-end via browser (Playwright) dan `n
 
 ## Fitur pasca-plan: Alokasi Keuangan (20/10/70)
 
-Di luar 13 fase asli — diminta user setelah Fase 12 selesai, supaya app aktif mengarahkan alokasi pemasukan ke dana darurat/investasi, bukan cuma mencatat pasif.
+Di luar 13 fase asli — diminta user setelah Fase 12 selesai, supaya app aktif mengarahkan alokasi pemasukan ke dana darurat/investasi, bukan cuma mencatat pasif. Tujuan besarnya: membantu user menuju *financial freedom*, kasih "tekanan" sadar supaya tidak boros dan rutin investasi.
 
-**Konsep**: rumus 20% Dana Darurat / 10% Investasi / 70% Biaya Hidup (referensi dari user), dihitung dari **total pemasukan bulan berjalan** — semua transaksi `type: income`, bukan cuma gaji pokok (freelance dll ikut terhitung). Persentase bisa diubah user (`allocationSettings` di state, default 20/10/70).
+**Konsep (v2, full-auto)**: rumus 20% Dana Darurat / 10% Investasi / 70% Biaya Hidup (referensi dari user), dihitung **otomatis** dari total pemasukan bulan berjalan — semua transaksi `type: income` (gaji, freelance, dll). **Tidak ada tagging manual** (versi v1 sempat pakai tag per-transaksi `allocationTag`, lalu user minta dirombak supaya full-otomatis tanpa perlu effort manual — kolom `allocation_tag` di DB dibiarkan ada tapi sudah tidak dipakai app, tidak ada migrasi drop).
 
-**Cara kerja**: bukan kategori transaksi baru — setiap transaksi income punya field opsional `allocationTag` (`"emergency" | "investment" | null`), ditandai langsung di `TransactionForm.jsx` saat user pilih tipe Pemasukan (segmented control "Alokasikan ke"). Pemasukan yang tidak ditandai otomatis masuk hitungan "Dana Bersih untuk Hidup" (`netForLiving = monthIncome - emergencyAllocated - investmentAllocated`).
+**Carry-over seperti hutang ke diri sendiri**: kalau suatu bulan realisasi alokasi (`income x persen` bulan itu) kurang dari target normalnya, kekurangannya otomatis ditambahkan ke target bulan berikutnya — akumulatif sampai tertutup oleh bulan dengan income tinggi. Dihitung ulang LIVE dari riwayat transaksi tiap render (`calculateAllocation` di `lib/allocation.js`), bukan snapshot tersimpan — supaya otomatis konsisten kalau ada koreksi transaksi lama.
+
+**Tracking return investasi**: user update manual "nilai portofolio sekarang" (`allocationSettings.investmentValue`, mirip pola Savings Goal/Debt), sistem hitung untung/rugi vs. total yang sudah ter-auto-alokasi ke investasi sejak awal data (`cumulativeInvested()` / `calculateInvestmentReturn()` di `lib/allocation.js`).
 
 **File kunci**:
-- `lib/allocation.js` — `calculateAllocation()` (pure function, hitung target & realisasi per pocket) + `emergencyFundSplit()` (breakdown internal 70% tabungan / 30% money market fund, murni informational dari strategi referensi user, tidak disimpan sebagai state terpisah).
-- `hooks/useFinancialAllocation.js` — wrapper hook.
-- `pages/AllocationPage.jsx` — halaman penuh: Dana Bersih untuk Hidup, progress Dana Darurat (+ breakdown tabungan/MMF), progress Investasi, target Biaya Hidup.
-- `components/allocation/AllocationSettingsForm.jsx` — edit persentase custom (live preview sisa % biaya hidup).
-- `components/dashboard/AllocationSummaryCard.jsx` — widget ringkas di Dashboard (hanya render kalau ada pemasukan bulan ini).
-- State baru: `allocationSettings` (single object, bukan array — pola sama seperti `activeMonth`) + kolom `allocation_tag` di tabel `transactions` + 3 kolom baru (`emergency_percent`, `investment_percent`, `living_percent`) di `app_settings` (`supabase/migration_007_allocation.sql`). Sheet Excel baru `AllocationSettings`.
+- `lib/allocation.js` — `calculateAllocation()` (auto + carry-over), `emergencyFundSplit()` (breakdown informational 70% tabungan / 30% money market fund), `cumulativeInvested()` + `calculateInvestmentReturn()` (gain/loss).
+- `hooks/useFinancialAllocation.js` — wrapper hook, gabung allocation + investmentReturn.
+- `pages/AllocationPage.jsx` — Dana Bersih untuk Hidup, progress + carry-over warning per pocket, breakdown tabungan/MMF, untung/rugi investasi, form "Update Nilai".
+- `components/allocation/AllocationSettingsForm.jsx` — edit persentase custom.
+- `components/allocation/InvestmentValueForm.jsx` — update nilai portofolio investasi.
+- `components/dashboard/AllocationSummaryCard.jsx` — widget ringkas Dashboard + badge peringatan kalau ada carry-over.
+- State: `allocationSettings` (single object: `emergencyPercent`, `investmentPercent`, `livingPercent`, `investmentValue`) + kolom `investment_value` di `app_settings` (`supabase/migration_007_allocation.sql`, `migration_008_investment_value.sql`).
 
-Diverifikasi langsung: income Rp1jt ditandai "Dana Darurat" → progress bar & breakdown 70/30 muncul benar, "Dana Bersih untuk Hidup" otomatis berkurang sebesar itu; ubah persentase ke 30/15/55 lalu kembali ke 20/10/70 — keduanya tersimpan & ter-apply dengan benar.
+Diverifikasi langsung: pemasukan otomatis ter-allocate 20/10/70 tanpa tagging apapun; set nilai investasi Rp500rb vs. total teralokasi Rp662rb → benar muncul "Rugi Rp -162.006,3 (-24,5%)".
 
 ## Status: plan 13-fase selesai + 1 fitur tambahan
 
