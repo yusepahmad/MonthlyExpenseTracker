@@ -3,10 +3,12 @@ import { AppProvider } from "./context/AppContext";
 import { useTheme } from "./hooks/useTheme";
 import { useHideAmount } from "./hooks/useHideAmount";
 import { useRecurringCheck } from "./hooks/useRecurringCheck";
+import { useReminder } from "./hooks/useReminder";
 import { useAuth } from "./hooks/useAuth";
 import Sidebar from "./components/layout/Sidebar";
 import BottomNav from "./components/layout/BottomNav";
 import TopBar from "./components/layout/TopBar";
+import ReminderPromptDialog from "./components/layout/ReminderPromptDialog";
 import DashboardPage from "./pages/DashboardPage";
 import TransactionsPage from "./pages/TransactionsPage";
 import RecurringPage from "./pages/RecurringPage";
@@ -24,6 +26,7 @@ function AppContent({ user, onSignOut }) {
   const { theme, toggleTheme } = useTheme();
   const { hideAmount, toggleHideAmount } = useHideAmount();
   const { dueItems, markChecked } = useRecurringCheck();
+  const { showPrompt, enableReminder, dismissPrompt } = useReminder();
 
   return (
     <div className="flex h-screen bg-transparent dark:bg-gray-950">
@@ -61,6 +64,11 @@ function AppContent({ user, onSignOut }) {
       <BottomNav activePage={activePage} onNavigate={setActivePage} />
 
       <RecurringDueDialog dueItems={dueItems} onClose={markChecked} />
+      <ReminderPromptDialog
+        open={showPrompt && dueItems.length === 0}
+        onEnable={enableReminder}
+        onDismiss={dismissPrompt}
+      />
     </div>
   );
 }
